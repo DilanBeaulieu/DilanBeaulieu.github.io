@@ -445,16 +445,37 @@ const strips=document.querySelectorAll('.strip');
 let results=[];
 let bonusTease=false;
 
-strips.forEach((s,i)=>{
-const duration=2+(i*0.4);
-s.style.transition='transform '+duration+'s cubic-bezier(.08,.74,.11,.99)';
-const move=(25+Math.floor(Math.random()*20))*140;
-s.style.transform='translateY(-'+move+'px)';
+strips.forEach((strip,i)=>{
+strip.innerHTML='';
+
+for(let j=0;j<45;j++){
+const sym=document.createElement('div');
+sym.className='symbol';
+sym.innerHTML=symbols[Math.floor(Math.random()*symbols.length)];
+strip.appendChild(sym);
+}
+
+let duration=2.2+(i*0.45);
+
+if(i>=3 && Math.random()<0.35){
+bonusTease=true;
+duration=1+(i*0.12);
+message.innerHTML='⚡ BONUS TEASE ⚡';
+}
+
+strip.style.transition='none';
+strip.style.transform='translateY(0px)';
+
+setTimeout(()=>{
+strip.style.transition='transform '+duration+'s cubic-bezier(.06,.69,.12,1)';
+const finalPos=(32+Math.floor(Math.random()*6))*140;
+strip.style.transform='translateY(-'+finalPos+'px)';
+},50);
 });
 
-await new Promise(r=>setTimeout(r,3200));
+await new Promise(r=>setTimeout(r,4200));
 
-strips.forEach((s,i)=>{
+strips.forEach((strip,i)=>{
 let res=symbols[Math.floor(Math.random()*symbols.length)];
 
 if(i<2 && Math.random()<0.28){
@@ -462,22 +483,18 @@ res='🌀';
 bonusTease=true;
 }
 
-if(bonusTease && i===4 && Math.random()<0.5){
+if(bonusTease && i===4 && Math.random()<0.55){
 res='🌀';
 }
 
 results.push(res);
 
-s.innerHTML='';
-for(let j=0;j<20;j++){
-const sym=document.createElement('div');
-sym.className='symbol';
-sym.innerHTML=j===8?res:symbols[Math.floor(Math.random()*symbols.length)];
-s.appendChild(sym);
-}
+const current=strip.children;
+const stopIndex=38;
 
-s.style.transition='none';
-s.style.transform='translateY(-1120px)';
+if(current[stopIndex]){
+current[stopIndex].innerHTML=res;
+}
 });
 
 let payout=0;
@@ -502,6 +519,9 @@ const multi=[8,10,15][Math.floor(Math.random()*3)];
 payout=bet*multi;
 message.innerHTML='✨ WIN x'+multi;
 }
+else{
+message.innerHTML='😢 Aucun gain';
+}
 
 if(payout>0){
 wallet+=payout;
@@ -513,7 +533,7 @@ addHistory('💰 Gain <b>'+payout.toFixed(2)+'$</b>');
 const bonusCountSymbols=results.filter(r=>r==='🌀').length;
 
 if(bonusCountSymbols>=3){
-openBonus();
+setTimeout(()=>openBonus(),1200);
 }
 
 update();
@@ -521,7 +541,7 @@ btn.style.pointerEvents='auto';
 
 setTimeout(()=>reels.classList.remove('winflash'),2500);
 
-if(auto)setTimeout(spin,1000);
+if(auto)setTimeout(spin,1200);
 }
 
 function autoSpin(){
