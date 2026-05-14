@@ -289,6 +289,27 @@ overflow:hidden;
 <div class="pay"><span>🟡 GRAND</span><span>x50</span></div>
 <div class="pay"><span>🟠 GIGA</span><span>x100</span></div>
 <div class="pay"><span>🔴 MAX WIN</span><span>x1000</span></div>
+
+<div style="margin-top:25px;padding:18px;border-radius:20px;background:#120c22;">
+<div style="font-size:1.3rem;color:#00e5ff;margin-bottom:12px">🎰 LÉGENDE</div>
+
+<div class="pay"><span>🚀 Tank</span><span>x2 - x5</span></div>
+<div class="pay"><span>💎 Diamond</span><span>x8 - x15</span></div>
+<div class="pay"><span>🔥 Fire</span><span>x10 - x25</span></div>
+<div class="pay"><span>⭐ Star</span><span>x15 - x35</span></div>
+<div class="pay"><span>👑 Crown</span><span>x25 - x50</span></div>
+<div class="pay"><span>💰 Money</span><span>x50 - x100</span></div>
+
+<div style="margin-top:18px;padding:14px;border-radius:16px;background:#1d1138;text-align:center">
+<div style="font-size:1.1rem;color:#ff68ff">🌀 BONUS SYMBOL</div>
+<div style="margin-top:8px;font-size:0.95rem;line-height:1.5">
+Obtiens <b>3 symboles BONUS 🌀</b><br>
+n'importe où sur le board<br>
+pour déclencher le <b>BONUS GAME</b> 🎁
+</div>
+</div>
+</div>
+
 <div style="margin-top:30px;padding:18px;border-radius:20px;background:#120c22;text-align:center">
 <div style="font-size:1.2rem">🎁 BONUS CHANCE</div>
 <div id="bonusChance" style="font-size:2rem;margin-top:10px">13.5%</div>
@@ -467,7 +488,7 @@ strip.style.transition='transform '+(2+(i*0.45))+'s cubic-bezier(.08,.72,.12,1)'
 strip.style.transform='translateY('+stop+'px)';
 
 if(result==='🌀'){
-document.getElementById('message').innerHTML='🌀 BONUS '+(results.filter(x=>x==='🌀').length)+'/3';
+document.getElementById('message').innerHTML='🌀 BONUS '+(results.filter(x=>x==='🌀').length)+'/3 • 3 BONUS ANYWHERE déclenche le BONUS GAME';
 }
 }
 
