@@ -478,13 +478,18 @@ Bonne chance 🍀
 </div>
 
 <div class="bonus-screen" id="bonusScreen">
-<div class="bonus-title">🔥 BONUS MODE 🔥</div>
-<div class="bonus-wheel" id="bonusWheel">x10</div>
-<button class="bonus-btn" onclick="playBonus()">LANCER BONUS</button>
+<div class="bonus-title">🔥 BONUS PICK GAME 🔥</div>
+<div style="margin-top:15px;font-size:1.2rem;opacity:0.8">Trouve 3 symboles identiques pour gagner !</div>
+
+<div id="bonusBoard" style="display:grid;grid-template-columns:repeat(5,120px);gap:18px;margin-top:45px"></div>
+
+<div style="margin-top:30px;font-size:1.5rem;font-weight:900" id="bonusInfo">Choisis une case...</div>
+
+<button class="bonus-btn" onclick="closeBonus()" style="display:none" id="bonusClose">RETOUR</button>
 </div>
 
 <script>
-const symbols=['💎','🔥','🚀','💰','⭐','🎯','👑','7️⃣'];
+const symbols=['💎','🔥','🚀','💰','⭐','🎯','👑','7️⃣','🌀'];
 const bets=[0.10,0.25,0.50,1,2,5,10,25,50,100,250,500,1000];
 
 let wallet=50000;
@@ -494,6 +499,8 @@ let maxWin=0;
 let totalWon=0;
 let bonusCount=0;
 let currentBonusMulti=10;
+let bonusTokens=[];
+let bonusActive=false;
 
 const reelsContainer=document.getElementById('reels');
 const message=document.getElementById('message');
@@ -563,8 +570,17 @@ spinBtn.disabled=true;
 const strips=document.querySelectorAll('.symbol-strip');
 
 strips.forEach((strip,index)=>{
-strip.style.transition='transform '+(1+index*0.3)+'s cubic-bezier(.17,.67,.12,.99)';
-const randomY=Math.floor(Math.random()*15)*130;
+let duration=1.6+index*0.45;
+
+if(index>=2 && Math.random()<0.35){
+duration=0.7+index*0.15;
+message.innerHTML='⚡ Bonus tease... derniers rouleaux ultra rapides !';
+}
+
+strip.style.transition='transform '+duration+'s cubic-bezier(.08,.74,.11,.99)';
+
+const randomY=(20+Math.floor(Math.random()*18))*130;
+
 strip.style.transform='translateY(-'+randomY+'px)';
 });
 
@@ -596,18 +612,21 @@ let payout=0;
 let text='😢 Aucun gain';
 
 if(highest===5){
-payout=bet*100;
+const multi=[50,75,100,150][Math.floor(Math.random()*4)];
+payout=bet*multi;
 text='💥 MEGA JACKPOT x100';
 showWin();
 confetti();
 }
 else if(highest===4){
-payout=bet*25;
+const multi=[15,20,25,30][Math.floor(Math.random()*4)];
+payout=bet*multi;
 text='🔥 HUGE WIN x25';
 showWin();
 }
 else if(highest===3){
-payout=bet*8;
+const multi=[5,8,10,12][Math.floor(Math.random()*4)];
+payout=bet*multi;
 text='✨ NICE WIN x8';
 showWin();
 }
@@ -627,7 +646,12 @@ addHistory('❌ Spin perdu ('+bet.toFixed(2)+'$)');
 message.innerHTML=text;
 updateUI();
 
-if(Math.random()<0.10){
+const bonusSymbols = results.filter(r=>r==='🌀').length;
+
+if(bonusSymbols >= 3){
+activateBonus();
+}
+else if(Math.random()<0.03){
 activateBonus();
 }
 
@@ -641,38 +665,101 @@ setTimeout(()=>line.style.display='none',2200);
 }
 
 function activateBonus(){
+bonusActive=true;
 bonusCount++;
 updateUI();
 
-document.getElementById('bonusScreen').style.display='flex';
+const screen=document.getElementById('bonusScreen');
+const board=document.getElementById('bonusBoard');
+const info=document.getElementById('bonusInfo');
+const close=document.getElementById('bonusClose');
 
-const multis=[10,20,50,75,100,200];
-let i=0;
+screen.style.display='flex';
+board.innerHTML='';
+close.style.display='none';
+info.innerHTML='Choisis une case...';
 
-const interval=setInterval(()=>{
-currentBonusMulti=multis[Math.floor(Math.random()*multis.length)];
-document.getElementById('bonusWheel').innerText='x'+currentBonusMulti;
-i++;
-if(i>20)clearInterval(interval);
+const pool=[
+{type:'MINI',reward:bet*8,color:'#00d0ff'},
+{type:'MINI',reward:bet*8,color:'#00d0ff'},
+{type:'MINI',reward:bet*8,color:'#00d0ff'},
+{type:'MOYEN',reward:bet*15,color:'#00ff95'},
+{type:'MOYEN',reward:bet*15,color:'#00ff95'},
+{type:'MOYEN',reward:bet*15,color:'#00ff95'},
+{type:'GRAND',reward:bet*35,color:'#ffe600'},
+{type:'GRAND',reward:bet*35,color:'#ffe600'},
+{type:'GRAND',reward:bet*35,color:'#ffe600'},
+{type:'GIGANTESQUE',reward:bet*75,color:'#ff8c00'},
+{type:'GIGANTESQUE',reward:bet*75,color:'#ff8c00'},
+{type:'GIGANTESQUE',reward:bet*75,color:'#ff8c00'},
+{type:'MAX WIN',reward:bet*250,color:'#ff005d'},
+{type:'MAX WIN',reward:bet*250,color:'#ff005d'},
+{type:'MAX WIN',reward:bet*250,color:'#ff005d'}
+];
+
+pool.sort(()=>Math.random()-0.5);
+bonusTokens=[];
+
+for(let i=0;i<15;i++){
+const item=pool[i];
+const card=document.createElement('div');
+card.style.width='120px';
+card.style.height='120px';
+card.style.borderRadius='22px';
+card.style.background='linear-gradient(135deg,#11182f,#050816)';
+card.style.border='2px solid rgba(255,255,255,0.08)';
+card.style.display='flex';
+card.style.alignItems='center';
+card.style.justifyContent='center';
+card.style.fontSize='3rem';
+card.style.cursor='pointer';
+card.style.transition='0.2s';
+card.innerHTML='❓';
+
+card.onclick=()=>{
+if(card.dataset.done)return;
+card.dataset.done='1';
+card.style.background=item.color;
+card.style.transform='scale(1.08)';
+card.innerHTML='<div style="font-size:0.9rem;text-align:center;font-weight:900">'+item.type+'<br>'+item.reward.toFixed(0)+'$</div>';
+
+bonusTokens.push(item);
+
+const same=bonusTokens.filter(t=>t.type===item.type);
+
+info.innerHTML='Tu as '+same.length+' / 3 '+item.type;
+
+if(same.length===3){
+wallet+=item.reward;
+totalWon+=item.reward;
+
+if(item.reward>maxWin)maxWin=item.reward;
+
+confetti();
+
+info.innerHTML='🏆 '+item.type+' GAGNÉ : '+item.reward.toFixed(2)+'$';
+message.innerHTML='🔥 BONUS '+item.type+' '+item.reward.toFixed(2)+'$';
+
+addHistory('🎁 Bonus '+item.type+' : <b>'+item.reward.toFixed(2)+'$</b>');
+
+close.style.display='block';
+updateUI();
+
+Array.from(board.children).forEach(c=>c.style.pointerEvents='none');
+}
+};
+
+board.appendChild(card);
+}
+}
+
+function closeBonus(){
+document.getElementById('bonusScreen').style.display='none';
+bonusActive=false;
 },100);
 }
 
-function playBonus(){
-const reward=bet*currentBonusMulti;
-wallet+=reward;
-totalWon+=reward;
-
-if(reward>maxWin)maxWin=reward;
-
-message.innerHTML='🚀 BONUS WIN '+reward.toFixed(2)+'$ (x'+currentBonusMulti+')';
-
-addHistory('🔥 BONUS : <b>'+reward.toFixed(2)+'$</b>');
-
-updateUI();
-confetti();
-
-document.getElementById('bonusScreen').style.display='none';
-}
+function playBonus(){}
 
 function confetti(){
 for(let i=0;i<50;i++){
