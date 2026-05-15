@@ -804,6 +804,28 @@
       return true;
     }
 
+
+
+    function makeWaterBlaster(seed = '') {
+      return {
+        id: seed || 'waterblaster-' + crypto.randomUUID(),
+        type: 'waterblaster',
+        x: rand(140, WORLD - 140),
+        y: rand(140, WORLD - 140),
+        createdAt: Date.now()
+      };
+    }
+
+    function maybeSpawnWaterBlaster(force = false) {
+      const currentCount = Object.values(specialFoods).filter(item => item.type === 'waterblaster').length;
+      if (currentCount >= WATER_BLASTER_MAX) return false;
+      if (!force && Math.random() > WATER_BLASTER_RESPAWN_CHANCE) return false;
+
+      const id = 'waterblaster-' + crypto.randomUUID();
+      specialFoods[id] = makeWaterBlaster(id);
+      return true;
+    }
+
     function pickWheelPrize() {
       const total = WHEEL_PRIZES.reduce((sum, p) => sum + p.weight, 0);
       let roll = Math.random() * total;
