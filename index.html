@@ -274,7 +274,7 @@
       </div>
 
       <div class="note">
-        Important: pour que le multijoueur fonctionne sur GitHub Pages, tu dois ajouter ta config Firebase dans le code, section <b>FIREBASE CONFIG</b>.
+        Multijoueur live avec Supabase Realtime. Tous les joueurs dans la même salle apparaissent dans le classement et sur la map.
       </div>
     </div>
   </div>
@@ -309,12 +309,13 @@
     const FOOD_COUNT = 190;
     const STEP = 22;
     const TICK_MS = 95;
-    const PLAYER_TIMEOUT = 12000;
+    const PLAYER_TIMEOUT = 45000;
+    const PLAYER_BROADCAST_EVERY_MS = 180;
 
-    let playerId = localStorage.getItem('snakePlayerId');
+    let playerId = sessionStorage.getItem('snakePlayerId');
     if (!playerId) {
       playerId = crypto.randomUUID();
-      localStorage.setItem('snakePlayerId', playerId);
+      sessionStorage.setItem('snakePlayerId', playerId);
     }
 
     let room = new URLSearchParams(location.search).get('room') || '';
@@ -327,6 +328,7 @@
     let camera = { x: 0, y: 0 };
     let gameTimer = null;
     let animationStarted = false;
+    let lastBroadcastAt = 0;
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -400,6 +402,14 @@
       channel.send({ type: 'broadcast', event, payload });
     }
 
+    function broadcastPlayer(force = false) {
+      if (!me) return;
+      const now = Date.now();
+      if (!force && now - lastBroadcastAt < PLAYER_BROADCAST_EVERY_MS) return;
+      lastBroadcastAt = now;
+      broadcast('player', { room, player: me });
+    }
+
     async function startGame() {
       try {
         createBtn.disabled = true;
@@ -430,6 +440,13 @@
         channel.on('broadcast', { event: 'player' }, ({ payload }) => {
           if (!payload || payload.room !== room || !payload.player) return;
           players[payload.player.id] = payload.player;
+          renderLeaderboard();
+        });
+
+        channel.on('broadcast', { event: 'hello' }, ({ payload }) => {
+          if (!payload || payload.room !== room) return;
+          broadcastPlayer(true);
+          broadcast('food', { room, foods });
         });
 
         channel.on('broadcast', { event: 'food' }, ({ payload }) => {
@@ -454,8 +471,10 @@
         clearInterval(gameTimer);
         gameTimer = setInterval(tick, TICK_MS);
 
-        broadcast('player', { room, player: me });
+        broadcast('hello', { room, id: playerId });
+        broadcastPlayer(true);
         broadcast('food', { room, foods });
+        renderLeaderboard();
 
         if (!animationStarted) {
           animationStarted = true;
@@ -522,7 +541,7 @@
       me.lastSeen = Date.now();
       players[playerId] = me;
       scoreText.textContent = me.score;
-      broadcast('player', { room, player: me });
+      broadcastPlayer(false);
       renderLeaderboard();
     }
 
