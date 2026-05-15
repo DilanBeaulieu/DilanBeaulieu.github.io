@@ -226,6 +226,119 @@
       .mobileControls { display: grid; }
       .two { grid-template-columns: 1fr; }
     }
+  
+
+    .minimapWrap {
+      position: fixed;
+      right: 18px;
+      top: 150px;
+      width: 190px;
+      height: 190px;
+      border-radius: 999px;
+      border: 2px solid rgba(73,242,255,0.35);
+      background: radial-gradient(circle, rgba(12,24,42,0.82), rgba(2,6,16,0.86));
+      box-shadow: 0 18px 55px rgba(0,0,0,0.35);
+      overflow: hidden;
+      backdrop-filter: blur(12px);
+      z-index: 4;
+      pointer-events: none;
+    }
+
+    #minimap {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .chatBox {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: min(360px, calc(100vw - 36px));
+      height: 270px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(5, 13, 24, 0.82);
+      backdrop-filter: blur(12px);
+      box-shadow: 0 22px 60px rgba(0,0,0,0.38);
+      z-index: 5;
+      overflow: hidden;
+    }
+
+    .chatHeader {
+      padding: 12px 14px;
+      font-weight: 900;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #chatMessages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px 12px;
+      font-size: 13px;
+    }
+
+    .chatMsg {
+      margin-bottom: 8px;
+      color: var(--muted);
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .chatMsg strong { color: var(--text); }
+
+    .chatInputRow {
+      display: flex;
+      gap: 8px;
+      padding: 10px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .chatInputRow input {
+      flex: 1;
+      padding: 10px 12px;
+      font-size: 14px;
+      border-radius: 14px;
+    }
+
+    .chatInputRow button {
+      width: auto;
+      margin: 0;
+      padding: 10px 13px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+
+    .skinPreview {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .skinBall {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 24px rgba(73,242,255,0.35);
+      font-size: 25px;
+    }
+
+    .skinText { color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 760px) {
+      .minimapWrap { width: 132px; height: 132px; top: 220px; right: 12px; }
+      .chatBox { height: 220px; bottom: 95px; right: 12px; }
+    }
   </style>
 </head>
 <body>
@@ -255,15 +368,37 @@
       <label>Ton nom</label>
       <input id="nameInput" maxlength="16" placeholder="Ex: Dilan" />
 
-      <label>Couleur</label>
-      <select id="colorInput">
-        <option value="#49f2ff">Bleu néon</option>
-        <option value="#72ff9d">Vert poison</option>
-        <option value="#ffcc4d">Or</option>
-        <option value="#ff5f7a">Rose rouge</option>
-        <option value="#a855f7">Violet</option>
-        <option value="#ffffff">Blanc</option>
+      <label>Couleur du snake</label>
+      <input id="colorInput" type="color" value="#49f2ff" />
+
+      <label>Logo / Drapeau sur la tête</label>
+      <select id="flagInput">
+        <option value="">Aucun logo</option>
+        <option value="🇨🇦">Canada 🇨🇦</option>
+        <option value="🇫🇷">France 🇫🇷</option>
+        <option value="🇺🇸">États-Unis 🇺🇸</option>
+        <option value="🇲🇽">Mexique 🇲🇽</option>
+        <option value="🇧🇷">Brésil 🇧🇷</option>
+        <option value="🇬🇧">Royaume-Uni 🇬🇧</option>
+        <option value="🇩🇪">Allemagne 🇩🇪</option>
+        <option value="🇮🇹">Italie 🇮🇹</option>
+        <option value="🇪🇸">Espagne 🇪🇸</option>
+        <option value="🇯🇵">Japon 🇯🇵</option>
+        <option value="🇰🇷">Corée 🇰🇷</option>
+        <option value="🇨🇳">Chine 🇨🇳</option>
+        <option value="🇵🇹">Portugal 🇵🇹</option>
+        <option value="🇦🇺">Australie 🇦🇺</option>
+        <option value="🌍">Monde 🌍</option>
+        <option value="👑">Couronne 👑</option>
+        <option value="🔥">Feu 🔥</option>
+        <option value="☠️">Skull ☠️</option>
+        <option value="⚡">Éclair ⚡</option>
       </select>
+
+      <div class="skinPreview">
+        <div id="skinBall" class="skinBall"> </div>
+        <div class="skinText">Aperçu de ton skin. Le logo apparaîtra sur la tête du snake.</div>
+      </div>
 
       <label>Code de salle</label>
       <input id="roomInput" maxlength="20" placeholder="Ex: warcry" />
@@ -276,6 +411,19 @@
       <div class="note">
         Multijoueur live avec Supabase Realtime. Tous les joueurs dans la même salle apparaissent dans le classement et sur la map.
       </div>
+    </div>
+  </div>
+
+  <div class="minimapWrap">
+    <canvas id="minimap"></canvas>
+  </div>
+
+  <div class="chatBox">
+    <div class="chatHeader">Chat de la salle</div>
+    <div id="chatMessages"></div>
+    <div class="chatInputRow">
+      <input id="chatInput" maxlength="120" placeholder="Écrire un message..." />
+      <button id="chatSend">Envoyer</button>
     </div>
   </div>
 
@@ -296,6 +444,13 @@
     const menu = document.getElementById('menu');
     const nameInput = document.getElementById('nameInput');
     const colorInput = document.getElementById('colorInput');
+    const flagInput = document.getElementById('flagInput');
+    const skinBall = document.getElementById('skinBall');
+    const minimap = document.getElementById('minimap');
+    const miniCtx = minimap.getContext('2d');
+    const chatMessages = document.getElementById('chatMessages');
+    const chatInput = document.getElementById('chatInput');
+    const chatSend = document.getElementById('chatSend');
     const roomInput = document.getElementById('roomInput');
     const createBtn = document.getElementById('createBtn');
     const randomBtn = document.getElementById('randomBtn');
@@ -321,6 +476,7 @@
     let room = new URLSearchParams(location.search).get('room') || '';
     let channel = null;
     let players = {};
+    let chatLog = [];
     let foods = {};
     let me = null;
     let direction = { x: 1, y: 0 };
@@ -336,6 +492,10 @@
       canvas.style.width = innerWidth + 'px';
       canvas.style.height = innerHeight + 'px';
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+
+      minimap.width = 190 * devicePixelRatio;
+      minimap.height = 190 * devicePixelRatio;
+      miniCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     }
     addEventListener('resize', resize);
     resize();
@@ -387,6 +547,7 @@
         id: playerId,
         name: String(name || 'Player').slice(0, 16),
         color,
+        flag: flagInput.value || '',
         score: 0,
         lastSeen: Date.now(),
         body: [
@@ -457,6 +618,12 @@
         channel.on('broadcast', { event: 'leave' }, ({ payload }) => {
           if (!payload || payload.room !== room || !payload.id) return;
           delete players[payload.id];
+          renderLeaderboard();
+        });
+
+        channel.on('broadcast', { event: 'chat' }, ({ payload }) => {
+          if (!payload || payload.room !== room || !payload.message) return;
+          addChatMessage(payload.message);
         });
 
         const status = await new Promise(resolve => {
@@ -548,7 +715,9 @@
     function respawn() {
       const oldName = me.name;
       const oldColor = me.color;
+      const oldFlag = me.flag;
       me = createPlayer(oldName, oldColor);
+      me.flag = oldFlag;
       direction = { x: 1, y: 0 };
       nextDirection = { x: 1, y: 0 };
     }
@@ -609,6 +778,37 @@
       }
     }
 
+    function drawMiniMap() {
+      const size = 190;
+      miniCtx.clearRect(0, 0, size, size);
+      miniCtx.save();
+      miniCtx.beginPath();
+      miniCtx.arc(size / 2, size / 2, size / 2 - 5, 0, Math.PI * 2);
+      miniCtx.clip();
+      miniCtx.fillStyle = 'rgba(3,10,20,0.92)';
+      miniCtx.fillRect(0, 0, size, size);
+
+      miniCtx.strokeStyle = 'rgba(73,242,255,0.25)';
+      miniCtx.lineWidth = 2;
+      miniCtx.strokeRect(10, 10, size - 20, size - 20);
+
+      for (const p of Object.values(players)) {
+        if (!p?.body?.[0]) continue;
+        const head = p.body[0];
+        const x = 10 + (head.x / WORLD) * (size - 20);
+        const y = 10 + (head.y / WORLD) * (size - 20);
+        miniCtx.beginPath();
+        miniCtx.fillStyle = p.color || '#49f2ff';
+        miniCtx.shadowColor = p.color || '#49f2ff';
+        miniCtx.shadowBlur = p.id === playerId ? 12 : 5;
+        miniCtx.arc(x, y, p.id === playerId ? 5 : 3.5, 0, Math.PI * 2);
+        miniCtx.fill();
+        miniCtx.shadowBlur = 0;
+      }
+
+      miniCtx.restore();
+    }
+
     function drawSnake(p, isMe) {
       if (!p || !p.body || !p.body.length) return;
       const color = p.color || '#49f2ff';
@@ -630,6 +830,14 @@
       ctx.font = '700 14px Arial';
       ctx.textAlign = 'center';
       ctx.fillText(p.name || 'Player', head.x - camera.x, head.y - camera.y - 30);
+
+      if (p.flag) {
+        ctx.font = '22px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(p.flag, head.x - camera.x, head.y - camera.y);
+        ctx.textBaseline = 'alphabetic';
+      }
     }
 
     function draw() {
@@ -645,6 +853,7 @@
       drawBorder();
       drawFood();
       Object.entries(players).forEach(([id, p]) => drawSnake(p, id === playerId));
+      drawMiniMap();
       requestAnimationFrame(draw);
     }
 
@@ -680,6 +889,45 @@
       copyBtn.textContent = 'Copié!';
       setTimeout(() => copyBtn.textContent = 'Copier', 900);
     });
+
+    function updateSkinPreview() {
+      skinBall.style.background = colorInput.value;
+      skinBall.style.boxShadow = `0 0 24px ${colorInput.value}66`;
+      skinBall.textContent = flagInput.value || '';
+    }
+
+    function addChatMessage(message) {
+      chatLog.push(message);
+      chatLog = chatLog.slice(-60);
+      chatMessages.innerHTML = chatLog.map(m => `
+        <div class="chatMsg"><strong style="color:${m.color || '#fff'}">${escapeHtml(m.name)}:</strong> ${escapeHtml(m.text)}</div>
+      `).join('');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function sendChat() {
+      const text = chatInput.value.trim();
+      if (!text || !me) return;
+      const message = {
+        id: crypto.randomUUID(),
+        name: me.name,
+        color: me.color,
+        text: text.slice(0, 120),
+        time: Date.now()
+      };
+      addChatMessage(message);
+      broadcast('chat', { room, message });
+      chatInput.value = '';
+    }
+
+    chatSend.addEventListener('click', sendChat);
+    chatInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') sendChat();
+    });
+
+    colorInput.addEventListener('input', updateSkinPreview);
+    flagInput.addEventListener('change', updateSkinPreview);
+    updateSkinPreview();
 
     addEventListener('beforeunload', () => {
       broadcast('leave', { room, id: playerId });
