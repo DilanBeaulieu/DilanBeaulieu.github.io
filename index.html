@@ -196,6 +196,50 @@
     .shareBox input { font-size: 13px; padding: 10px; }
     .shareBox button { width: auto; margin: 0; padding: 10px 12px; border-radius: 12px; }
 
+
+    .multiplierLogBox {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255,255,255,0.10);
+    }
+
+    .multiplierLogTitle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 0.7px;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+
+    #multiplierLog {
+      margin-top: 7px;
+      display: grid;
+      gap: 6px;
+      max-height: 150px;
+      overflow: hidden;
+      font-size: 12px;
+    }
+
+    .multiplierLogItem {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 8px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.07);
+      color: var(--muted);
+    }
+
+    .multiplierLogItem strong { color: var(--text); }
+    .multiplierLogItem .gain { color: var(--good); font-weight: 1000; }
+    .multiplierLogItem .lose { color: var(--danger); font-weight: 1000; }
+
     .mobileControls {
       position: fixed;
       left: 50%;
@@ -510,6 +554,12 @@
         <input id="shareLink" readonly />
         <button id="copyBtn">Copier</button>
       </div>
+      <div class="multiplierLogBox">
+        <div class="multiplierLogTitle"><span>🎡 Gains roue</span><span>Live</span></div>
+        <div id="multiplierLog">
+          <div class="multiplierLogItem"><span>Aucun gain encore</span><span>—</span></div>
+        </div>
+      </div>
     </div>
 
     <div class="hudPanel">
@@ -648,6 +698,7 @@
     const wheelSpinOverlay = document.getElementById('wheelSpinOverlay');
     const wheelTrack = document.getElementById('wheelTrack');
     const wheelResult = document.getElementById('wheelResult');
+    const multiplierLog = document.getElementById('multiplierLog');
 
     const WORLD = 3600;
     const FOOD_COUNT = 260;
@@ -707,6 +758,7 @@
     let lastBroadcastAt = 0;
     let isSpinningWheel = false;
     let wheelSpinPrizeMap = [];
+    let multiplierLogs = [];
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -904,6 +956,39 @@
       return closestPrize;
     }
 
+    function addMultiplierLog(entry, shouldBroadcast = false) {
+      if (!entry) return;
+
+      const cleanEntry = {
+        id: entry.id || crypto.randomUUID(),
+        name: String(entry.name || 'Player').slice(0, 16),
+        color: entry.color || '#fff',
+        prize: String(entry.prize || '?').slice(0, 8),
+        oldScore: Math.max(0, Math.floor(entry.oldScore || 0)),
+        newScore: Math.max(0, Math.floor(entry.newScore || 0)),
+        type: entry.type === 'lose' ? 'lose' : 'multi',
+        at: entry.at || Date.now()
+      };
+
+      multiplierLogs = [cleanEntry, ...multiplierLogs.filter(item => item.id !== cleanEntry.id)].slice(0, 8);
+
+      multiplierLog.innerHTML = multiplierLogs.map(item => {
+        const isLose = item.type === 'lose';
+        const resultClass = isLose ? 'lose' : 'gain';
+        const resultText = isLose ? 'Perdu' : `${item.oldScore} → ${item.newScore}`;
+        return `
+          <div class="multiplierLogItem">
+            <span><strong style="color:${item.color}">${escapeHtml(item.name)}</strong> ${escapeHtml(item.prize)}</span>
+            <span class="${resultClass}">${escapeHtml(resultText)}</span>
+          </div>
+        `;
+      }).join('');
+
+      if (shouldBroadcast) {
+        broadcast('multiplierLog', { room, entry: cleanEntry });
+      }
+    }
+
     function startWheelSpin() {
       if (!me || isSpinningWheel) return;
       isSpinningWheel = true;
@@ -923,12 +1008,28 @@
 
         if (prize.type === 'lose') {
           wheelResult.textContent = '💀 X! Tu perds tout. Ton score est supprimé!';
+          addMultiplierLog({
+            name: me.name,
+            color: me.color,
+            prize: 'X',
+            oldScore,
+            newScore: 0,
+            type: 'lose'
+          }, true);
           respawn();
         } else {
           const newScore = Math.floor(oldScore * prize.value);
           me.score = newScore;
           scoreText.textContent = me.score;
           wheelResult.textContent = `🔥 Gagné ${prize.label}! Score ${oldScore} → ${newScore}`;
+          addMultiplierLog({
+            name: me.name,
+            color: me.color,
+            prize: prize.label,
+            oldScore,
+            newScore,
+            type: 'multi'
+          }, true);
         }
         players[playerId] = me;
         broadcastPlayer(true);
@@ -1039,6 +1140,8 @@
         roomText.textContent = room;
         scoreText.textContent = '0';
         ammoText.textContent = '0';
+        multiplierLogs = [];
+        multiplierLog.innerHTML = '<div class="multiplierLogItem"><span>Aucun gain encore</span><span>—</span></div>';
         shareLink.value = location.href;
 
         if (channel) await supabase.removeChannel(channel);
@@ -1074,6 +1177,11 @@
         channel.on('broadcast', { event: 'chat' }, ({ payload }) => {
           if (!payload || payload.room !== room || !payload.message) return;
           addChatMessage(payload.message);
+        });
+
+        channel.on('broadcast', { event: 'multiplierLog' }, ({ payload }) => {
+          if (!payload || payload.room !== room || !payload.entry) return;
+          addMultiplierLog(payload.entry, false);
         });
 
         channel.on('broadcast', { event: 'shot' }, ({ payload }) => {
