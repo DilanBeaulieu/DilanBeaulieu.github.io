@@ -541,6 +541,104 @@
       .wheelPrize { min-width: 70px; height: 48px; font-size: 18px; }
     }
 
+
+    .adminCorner {
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      width: 22px;
+      height: 22px;
+      z-index: 30;
+      pointer-events: auto;
+    }
+
+    .adminHotspot {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 22px;
+      height: 22px;
+      border-top-right-radius: 14px;
+      background: rgba(73, 242, 255, 0.05);
+      border-top: 1px solid rgba(73,242,255,0.10);
+      border-right: 1px solid rgba(73,242,255,0.10);
+      opacity: 0.15;
+      transition: opacity .15s ease, background .15s ease;
+      cursor: pointer;
+    }
+
+    .adminCorner:hover .adminHotspot,
+    .adminCorner.open .adminHotspot {
+      opacity: 1;
+      background: rgba(73, 242, 255, 0.22);
+      box-shadow: 0 0 18px rgba(73,242,255,0.25);
+    }
+
+    .adminPanel {
+      position: absolute;
+      left: 12px;
+      bottom: 12px;
+      width: min(340px, calc(100vw - 24px));
+      padding: 14px;
+      border-radius: 22px;
+      border: 1px solid rgba(255,255,255,0.14);
+      background: rgba(5, 13, 24, 0.94);
+      backdrop-filter: blur(14px);
+      box-shadow: 0 22px 65px rgba(0,0,0,0.45);
+      transform: translate(-110%, 110%) scale(.96);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform .18s ease, opacity .18s ease;
+    }
+
+    .adminCorner:hover .adminPanel,
+    .adminCorner.open .adminPanel {
+      transform: translate(0, 0) scale(1);
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .adminPanel h3 {
+      margin: 0 0 8px;
+      font-size: 18px;
+      letter-spacing: -.3px;
+    }
+
+    .adminPanel .adminMiniText {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+      margin-bottom: 10px;
+    }
+
+    .adminPanel input {
+      padding: 10px 12px;
+      border-radius: 12px;
+      font-size: 14px;
+    }
+
+    .adminPanel button {
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 13px;
+      font-size: 13px;
+    }
+
+    .adminGrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .adminGrid button, .adminPanel .adminFullBtn { margin-top: 0; }
+    .adminDanger { background: linear-gradient(90deg, #ff5f7a, #ffcc4d); }
+    .adminOn { outline: 2px solid rgba(114,255,157,.65); filter: brightness(1.08); }
+
+    @media (max-width: 760px) {
+      .adminPanel { width: min(320px, calc(100vw - 20px)); }
+      .adminGrid { grid-template-columns: 1fr; }
+    }
+
   </style>
 </head>
 <body>
@@ -661,6 +759,33 @@
     </div>
   </div>
 
+
+  <div id="adminCorner" class="adminCorner" title="Admin">
+    <div class="adminHotspot"></div>
+    <div id="adminPanel" class="adminPanel">
+      <h3>🛡️ Menu Admin</h3>
+      <div id="adminLoginBox">
+        <div class="adminMiniText">Menu caché. Mot de passe requis pour activer les outils.</div>
+        <input id="adminPasswordInput" type="password" placeholder="Mot de passe admin" autocomplete="off" />
+        <button id="adminUnlockBtn" type="button">Déverrouiller</button>
+      </div>
+      <div id="adminToolsBox" class="hidden">
+        <div class="adminMiniText">Outils actifs seulement pour ton joueur dans cette salle.</div>
+        <input id="adminPointsInput" type="number" min="1" value="10000" placeholder="Points à ajouter" />
+        <button id="adminAddPointsBtn" type="button" class="adminFullBtn">+ Ajouter points</button>
+        <div class="adminGrid">
+          <button id="adminImmortalBtn" type="button" class="secondary">Immortel: OFF</button>
+          <button id="adminSpeedBtn" type="button" class="secondary">Vitesse: OFF</button>
+          <button id="adminAttractBtn" type="button">🧲 Attirer points</button>
+          <button id="adminSpawnWheelBtn" type="button">🎡 Spawn roue</button>
+          <button id="adminSpawnGunBtn" type="button">🔫 Spawn fusil</button>
+          <button id="adminSpawnGatoradeBtn" type="button">🥤 Spawn Gatorade</button>
+        </div>
+        <button id="adminHideBtn" type="button" class="secondary adminFullBtn">Cacher le menu</button>
+      </div>
+    </div>
+  </div>
+
   <div class="mobileControls">
     <button class="empty"></button><button data-dir="up">▲</button><button class="empty"></button>
     <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
@@ -699,6 +824,20 @@
     const wheelTrack = document.getElementById('wheelTrack');
     const wheelResult = document.getElementById('wheelResult');
     const multiplierLog = document.getElementById('multiplierLog');
+    const adminCorner = document.getElementById('adminCorner');
+    const adminLoginBox = document.getElementById('adminLoginBox');
+    const adminToolsBox = document.getElementById('adminToolsBox');
+    const adminPasswordInput = document.getElementById('adminPasswordInput');
+    const adminUnlockBtn = document.getElementById('adminUnlockBtn');
+    const adminPointsInput = document.getElementById('adminPointsInput');
+    const adminAddPointsBtn = document.getElementById('adminAddPointsBtn');
+    const adminImmortalBtn = document.getElementById('adminImmortalBtn');
+    const adminSpeedBtn = document.getElementById('adminSpeedBtn');
+    const adminAttractBtn = document.getElementById('adminAttractBtn');
+    const adminSpawnWheelBtn = document.getElementById('adminSpawnWheelBtn');
+    const adminSpawnGunBtn = document.getElementById('adminSpawnGunBtn');
+    const adminSpawnGatoradeBtn = document.getElementById('adminSpawnGatoradeBtn');
+    const adminHideBtn = document.getElementById('adminHideBtn');
 
     const WORLD = 3600;
     const FOOD_COUNT = 260;
@@ -759,6 +898,9 @@
     let isSpinningWheel = false;
     let wheelSpinPrizeMap = [];
     let multiplierLogs = [];
+    let adminUnlocked = sessionStorage.getItem('snakeAdminUnlocked') === '1';
+    let adminImmortal = false;
+    let adminSpeed = false;
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -1007,7 +1149,7 @@
         const prize = getWheelPrizeUnderPointer() || pickedPrize;
 
         if (prize.type === 'lose') {
-          wheelResult.textContent = '💀 X! Tu perds tout. Ton score est supprimé!';
+          wheelResult.textContent = '💀 X! Tu exploses et ton score tombe au sol!';
           addMultiplierLog({
             name: me.name,
             color: me.color,
@@ -1016,6 +1158,8 @@
             newScore: 0,
             type: 'lose'
           }, true);
+          spawnExplosionFood(me);
+          broadcast('food', { room, foods, specialFoods });
           respawn();
         } else {
           const newScore = Math.floor(oldScore * prize.value);
@@ -1118,6 +1262,69 @@
       if (!force && now - lastBroadcastAt < PLAYER_BROADCAST_EVERY_MS) return;
       lastBroadcastAt = now;
       broadcast('player', { room, player: me });
+    }
+
+
+    function refreshAdminUi() {
+      adminLoginBox.classList.toggle('hidden', adminUnlocked);
+      adminToolsBox.classList.toggle('hidden', !adminUnlocked);
+      adminImmortalBtn.textContent = 'Immortel: ' + (adminImmortal ? 'ON' : 'OFF');
+      adminSpeedBtn.textContent = 'Vitesse: ' + (adminSpeed ? 'ON' : 'OFF');
+      adminImmortalBtn.classList.toggle('adminOn', adminImmortal);
+      adminSpeedBtn.classList.toggle('adminOn', adminSpeed);
+    }
+
+    function unlockAdmin() {
+      if (adminPasswordInput.value !== 'Test67') {
+        adminPasswordInput.value = '';
+        adminPasswordInput.placeholder = 'Mauvais mot de passe';
+        return;
+      }
+      adminUnlocked = true;
+      sessionStorage.setItem('snakeAdminUnlocked', '1');
+      adminPasswordInput.value = '';
+      adminCorner.classList.add('open');
+      refreshAdminUi();
+    }
+
+    function requireAdmin() {
+      return adminUnlocked && me;
+    }
+
+    function adminBroadcastFood() {
+      broadcast('food', { room, foods, specialFoods });
+    }
+
+    function spawnSpecialNearPlayer(type) {
+      if (!requireAdmin() || !me?.body?.[0]) return;
+      const head = me.body[0];
+      const id = type + '-' + crypto.randomUUID();
+      const item = type === 'wheel' ? makeWheel(id) : (type === 'waterblaster' ? makeWaterBlaster(id) : makeGatorade(id));
+      item.x = Math.max(60, Math.min(WORLD - 60, head.x + rand(-180, 180)));
+      item.y = Math.max(60, Math.min(WORLD - 60, head.y + rand(-180, 180)));
+      specialFoods[id] = item;
+      adminBroadcastFood();
+    }
+
+    function attractAllFoodToPlayer() {
+      if (!requireAdmin() || !me?.body?.[0]) return;
+      const head = me.body[0];
+      let i = 0;
+      for (const food of Object.values(foods)) {
+        const angle = (i / Math.max(1, Object.keys(foods).length)) * Math.PI * 2;
+        const ring = 70 + (i % 9) * 16;
+        food.x = Math.max(30, Math.min(WORLD - 30, head.x + Math.cos(angle) * ring));
+        food.y = Math.max(30, Math.min(WORLD - 30, head.y + Math.sin(angle) * ring));
+        i++;
+      }
+      adminBroadcastFood();
+    }
+
+    function killMeAndDropScore() {
+      if (!me) return;
+      spawnExplosionFood(me);
+      broadcast('food', { room, foods, specialFoods });
+      respawn();
     }
 
     async function startGame() {
@@ -1252,7 +1459,7 @@
       updateMouseDirection();
       direction = nextDirection;
       const head = me.body[0];
-      const speedBoost = mouseControlEnabled ? 1.15 : 1;
+      const speedBoost = (mouseControlEnabled ? 1.15 : 1) * (adminSpeed ? 1.85 : 1);
 
       const newHead = {
         x: Math.max(0, Math.min(WORLD, head.x + direction.x * STEP * speedBoost)),
@@ -1304,25 +1511,22 @@
         me.body.pop();
       }
 
-      for (let i = 5; i < me.body.length; i++) {
-        if (dist(newHead, me.body[i]) < 12) {
-          spawnExplosionFood(me);
-          broadcast('food', { room, foods, specialFoods });
-          respawn();
-        }
-      }
+      // Collision avec soi-même désactivée: le snake peut maintenant passer à travers son propre corps.
 
+      let crashedIntoOtherPlayer = false;
       for (const [id, p] of Object.entries(players)) {
-        if (id === playerId || !p.body) continue;
+        if (id === playerId || !p.body || adminImmortal) continue;
 
         for (const part of p.body) {
           if (dist(newHead, part) < 15) {
             spawnExplosionFood(me);
             broadcast('food', { room, foods, specialFoods });
             respawn();
+            crashedIntoOtherPlayer = true;
             break;
           }
         }
+        if (crashedIntoOtherPlayer) break;
       }
 
       me.lastSeen = Date.now();
@@ -1381,7 +1585,7 @@
     }
 
     function checkBulletHits() {
-      if (!me?.body?.length) return;
+      if (!me?.body?.length || adminImmortal) return;
 
       for (const [id, b] of Object.entries(bullets)) {
         if (!b || b.owner === playerId) continue;
@@ -1706,7 +1910,7 @@
 
     addEventListener('mousedown', e => {
       const target = e.target;
-      const isUiClick = target && (target.closest?.('.screen') || target.closest?.('.chatBox') || target.closest?.('.hudPanel') || target.closest?.('.mobileControls'));
+      const isUiClick = target && (target.closest?.('.screen') || target.closest?.('.chatBox') || target.closest?.('.hudPanel') || target.closest?.('.mobileControls') || target.closest?.('.adminCorner'));
 
       // Tirer ne doit jamais changer/forcer le mode déplacement.
       // Avant, le clic gauche activait mouseControlEnabled avant le tir, ce qui pouvait donner
@@ -1732,6 +1936,43 @@
       copyBtn.textContent = 'Copié!';
       setTimeout(() => copyBtn.textContent = 'Copier', 900);
     });
+
+
+    adminCorner.addEventListener('click', e => {
+      if (e.target === adminCorner || e.target.classList.contains('adminHotspot')) {
+        adminCorner.classList.toggle('open');
+      }
+    });
+    adminPanel.addEventListener('click', e => e.stopPropagation());
+    adminUnlockBtn.addEventListener('click', unlockAdmin);
+    adminPasswordInput.addEventListener('keydown', e => {
+      if (e.key === 'Enter') unlockAdmin();
+    });
+    adminHideBtn.addEventListener('click', () => adminCorner.classList.remove('open'));
+    adminAddPointsBtn.addEventListener('click', () => {
+      if (!requireAdmin()) return;
+      const amount = Math.max(1, Math.floor(Number(adminPointsInput.value) || 0));
+      me.score = Math.max(0, Math.floor(me.score || 0)) + amount;
+      scoreText.textContent = me.score;
+      players[playerId] = me;
+      broadcastPlayer(true);
+      renderLeaderboard();
+    });
+    adminImmortalBtn.addEventListener('click', () => {
+      if (!adminUnlocked) return;
+      adminImmortal = !adminImmortal;
+      refreshAdminUi();
+    });
+    adminSpeedBtn.addEventListener('click', () => {
+      if (!adminUnlocked) return;
+      adminSpeed = !adminSpeed;
+      refreshAdminUi();
+    });
+    adminAttractBtn.addEventListener('click', attractAllFoodToPlayer);
+    adminSpawnWheelBtn.addEventListener('click', () => spawnSpecialNearPlayer('wheel'));
+    adminSpawnGunBtn.addEventListener('click', () => spawnSpecialNearPlayer('waterblaster'));
+    adminSpawnGatoradeBtn.addEventListener('click', () => spawnSpecialNearPlayer('gatorade'));
+    refreshAdminUi();
 
     function updateSkinPreview() {
       skinBall.style.background = colorInput.value;
