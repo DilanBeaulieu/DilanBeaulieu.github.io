@@ -557,6 +557,8 @@
     let me = null;
     let direction = { x: 1, y: 0 };
     let nextDirection = { x: 1, y: 0 };
+    let mouseControlEnabled = true;
+    let mouseTarget = { x: innerWidth / 2, y: innerHeight / 2 };
     let camera = { x: 0, y: 0 };
     let gameTimer = null;
     let animationStarted = false;
@@ -732,6 +734,24 @@
       }
     }
 
+    function updateMouseDirection() {
+      if (!mouseControlEnabled || !me?.body?.[0]) return;
+
+      const centerX = innerWidth / 2;
+      const centerY = innerHeight / 2;
+
+      const dx = mouseTarget.x - centerX;
+      const dy = mouseTarget.y - centerY;
+
+      const len = Math.hypot(dx, dy);
+      if (len < 12) return;
+
+      nextDirection = {
+        x: dx / len,
+        y: dy / len
+      };
+    }
+
     function tick() {
       if (!me) return;
 
@@ -742,11 +762,14 @@
         }
       }
 
+      updateMouseDirection();
       direction = nextDirection;
       const head = me.body[0];
+      const speedBoost = mouseControlEnabled ? 1.15 : 1;
+
       const newHead = {
-        x: Math.max(0, Math.min(WORLD, head.x + direction.x * STEP)),
-        y: Math.max(0, Math.min(WORLD, head.y + direction.y * STEP))
+        x: Math.max(0, Math.min(WORLD, head.x + direction.x * STEP * speedBoost)),
+        y: Math.max(0, Math.min(WORLD, head.y + direction.y * STEP * speedBoost))
       };
 
       me.body.unshift(newHead);
@@ -933,6 +956,18 @@
       requestAnimationFrame(draw);
     }
 
+    addEventListener('mousemove', e => {
+      mouseTarget.x = e.clientX;
+      mouseTarget.y = e.clientY;
+    });
+
+    addEventListener('touchmove', e => {
+      const touch = e.touches?.[0];
+      if (!touch) return;
+      mouseTarget.x = touch.clientX;
+      mouseTarget.y = touch.clientY;
+    }, { passive: true });
+
     function setDir(dir) {
       const dirs = {
         up: { x: 0, y: -1 },
@@ -942,7 +977,7 @@
       };
       const wanted = dirs[dir];
       if (!wanted) return;
-      if (wanted.x + direction.x === 0 && wanted.y + direction.y === 0) return;
+      mouseControlEnabled = false;
       nextDirection = wanted;
     }
 
@@ -951,6 +986,10 @@
       if (['ArrowDown', 's', 'S'].includes(e.key)) setDir('down');
       if (['ArrowLeft', 'a', 'A'].includes(e.key)) setDir('left');
       if (['ArrowRight', 'd', 'D'].includes(e.key)) setDir('right');
+    });
+
+    addEventListener('mousedown', () => {
+      mouseControlEnabled = true;
     });
 
     document.querySelectorAll('[data-dir]').forEach(btn => {
