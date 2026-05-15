@@ -285,37 +285,15 @@
   </div>
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-    import { getDatabase, ref, set, update, onValue, remove, onDisconnect, get } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-database.js";
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
     /* =========================================================
-       FIREBASE CONFIG
-       1. Va sur https://console.firebase.google.com/
-       2. Crée un projet
-       3. Ajoute une Web App
-       4. Active Realtime Database en mode test pour débuter
-       5. Remplace les valeurs ci-dessous par les tiennes
+       SUPABASE CONFIG
     ========================================================= */
-    const firebaseConfig = {
-      apiKey: "REMPLACE_MOI",
-      authDomain: "REMPLACE_MOI.firebaseapp.com",
-      databaseURL: "https://REMPLACE_MOI-default-rtdb.firebaseio.com",
-      projectId: "REMPLACE_MOI",
-      storageBucket: "REMPLACE_MOI.appspot.com",
-      messagingSenderId: "REMPLACE_MOI",
-      appId: "REMPLACE_MOI"
-    };
+    const SUPABASE_URL = 'https://yqudouxcqtdjfpdpsmty.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdWRvdXhjcXRkamZwZHBzbXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzQ2MjgsImV4cCI6MjA5NDQ1MDYyOH0.iJhrcjC4m37iPZNYonL82aBiPvjczGOnVXX2D4DtCQU';
 
-    const FIREBASE_READY = firebaseConfig.apiKey !== "REMPLACE_MOI" && firebaseConfig.databaseURL.includes("firebaseio.com");
-    let app = null;
-    let db = null;
-
-    if (FIREBASE_READY) {
-      app = initializeApp(firebaseConfig);
-      db = getDatabase(app);
-    } else {
-      console.warn("Firebase non configuré: le jeu démarre en mode solo local. Ajoute ta config Firebase pour jouer en live avec tes amis.");
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -336,6 +314,8 @@
     const STEP = 24;
     const TICK_MS = 105;
     const PLAYER_TIMEOUT = 15000;
+
+    let channel = null;
 
     let playerId = localStorage.getItem('snakePlayerId');
     if (!playerId) {
@@ -399,23 +379,24 @@
     }
 
     async function ensureFood() {
-      if (!FIREBASE_READY) {
-        foods = {};
-        for (let i = 0; i < FOOD_COUNT; i++) {
-          foods['local-' + i] = makeFood();
-        }
-        return;
-      }
+      if (Object.keys(foods).length > 0) return;
 
-      const foodRef = ref(db, `snakeRooms/${room}/food`);
-      const snap = await get(foodRef);
-      const current = snap.val() || {};
-      const updates = {};
-      const missing = FOOD_COUNT - Object.keys(current).length;
-      for (let i = 0; i < missing; i++) {
-        updates['f' + crypto.randomUUID().slice(0, 8)] = makeFood();
+      for (let i = 0; i < FOOD_COUNT; i++) {
+        foods['food-' + i] = makeFood();
       }
-      if (Object.keys(updates).length) update(foodRef, updates);
+    }
+
+    function syncPlayers() {
+      if (!channel) return;
+
+      channel.send({
+        type: 'broadcast',
+        event: 'playerUpdate',
+        payload: {
+          room,
+          player: me
+        }
+      });
     }
 
     function createPlayer(name, color) {
@@ -446,36 +427,34 @@
 
       me = createPlayer(name, color);
       players = { [playerId]: me };
-      roomText.textContent = FIREBASE_READY ? room : room + ' (mode solo local)';
+      roomText.textContent = room;
       shareLink.value = location.href;
       menu.classList.add('hidden');
 
       await ensureFood();
 
-      clearInterval(gameTimer);
-      gameTimer = setInterval(tick, TICK_MS);
-      requestAnimationFrame(draw);
-
-      if (!FIREBASE_READY) {
-        alert('Le jeu fonctionne maintenant en mode solo local. Pour voir tes amis en live, ajoute ta config Firebase dans le fichier index.html.');
-        return;
+      if (channel) {
+        supabase.removeChannel(channel);
       }
 
-      const myRef = ref(db, `snakeRooms/${room}/players/${playerId}`);
-      await set(myRef, me);
-      onDisconnect(myRef).remove();
-
-      onValue(ref(db, `snakeRooms/${room}/players`), snap => {
-        players = snap.val() || {};
-        const fresh = Date.now() - PLAYER_TIMEOUT;
-        for (const [id, p] of Object.entries(players)) {
-          if (p.lastSeen && p.lastSeen < fresh) remove(ref(db, `snakeRooms/${room}/players/${id}`));
+      channel = supabase.channel('snake-room-' + room, {
+        config: {
+          broadcast: { self: true }
         }
       });
 
-      onValue(ref(db, `snakeRooms/${room}/food`), snap => {
-        foods = snap.val() || {};
+      channel.on('broadcast', { event: 'playerUpdate' }, ({ payload }) => {
+        if (!payload?.player) return;
+        players[payload.player.id] = payload.player;
       });
+
+      channel.subscribe((status) => {
+        console.log('Supabase status:', status);
+      });
+
+      clearInterval(gameTimer);
+      gameTimer = setInterval(tick, TICK_MS);
+      requestAnimationFrame(draw);
     }
 
     function tick() {
@@ -504,8 +483,8 @@
       if (!ate) {
         me.body.pop();
       } else if (eatenFoodId) {
-        if (FIREBASE_READY) {
-          const foodUpdates = {};
+        foods[eatenFoodId] = makeFood();
+      };
           foodUpdates[eatenFoodId] = makeFood();
           update(ref(db, `snakeRooms/${room}/food`), foodUpdates);
         } else {
@@ -530,9 +509,7 @@
       me.lastSeen = Date.now();
       players[playerId] = me;
       scoreText.textContent = me.score;
-      if (FIREBASE_READY) {
-        set(ref(db, `snakeRooms/${room}/players/${playerId}`), me);
-      }
+      syncPlayers();
       renderLeaderboard();
     }
 
