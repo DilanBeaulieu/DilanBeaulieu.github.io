@@ -306,8 +306,16 @@
       appId: "REMPLACE_MOI"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const FIREBASE_READY = firebaseConfig.apiKey !== "REMPLACE_MOI" && firebaseConfig.databaseURL.includes("firebaseio.com");
+    let app = null;
+    let db = null;
+
+    if (FIREBASE_READY) {
+      app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+    } else {
+      console.warn("Firebase non configuré: le jeu démarre en mode solo local. Ajoute ta config Firebase pour jouer en live avec tes amis.");
+    }
 
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d');
@@ -391,6 +399,14 @@
     }
 
     async function ensureFood() {
+      if (!FIREBASE_READY) {
+        foods = {};
+        for (let i = 0; i < FOOD_COUNT; i++) {
+          foods['local-' + i] = makeFood();
+        }
+        return;
+      }
+
       const foodRef = ref(db, `snakeRooms/${room}/food`);
       const snap = await get(foodRef);
       const current = snap.val() || {};
@@ -429,14 +445,25 @@
       history.replaceState(null, '', url);
 
       me = createPlayer(name, color);
-      roomText.textContent = room;
+      players = { [playerId]: me };
+      roomText.textContent = FIREBASE_READY ? room : room + ' (mode solo local)';
       shareLink.value = location.href;
       menu.classList.add('hidden');
+
+      await ensureFood();
+
+      clearInterval(gameTimer);
+      gameTimer = setInterval(tick, TICK_MS);
+      requestAnimationFrame(draw);
+
+      if (!FIREBASE_READY) {
+        alert('Le jeu fonctionne maintenant en mode solo local. Pour voir tes amis en live, ajoute ta config Firebase dans le fichier index.html.');
+        return;
+      }
 
       const myRef = ref(db, `snakeRooms/${room}/players/${playerId}`);
       await set(myRef, me);
       onDisconnect(myRef).remove();
-      await ensureFood();
 
       onValue(ref(db, `snakeRooms/${room}/players`), snap => {
         players = snap.val() || {};
@@ -449,10 +476,6 @@
       onValue(ref(db, `snakeRooms/${room}/food`), snap => {
         foods = snap.val() || {};
       });
-
-      clearInterval(gameTimer);
-      gameTimer = setInterval(tick, TICK_MS);
-      requestAnimationFrame(draw);
     }
 
     function tick() {
@@ -481,9 +504,13 @@
       if (!ate) {
         me.body.pop();
       } else if (eatenFoodId) {
-        const foodUpdates = {};
-        foodUpdates[eatenFoodId] = makeFood();
-        update(ref(db, `snakeRooms/${room}/food`), foodUpdates);
+        if (FIREBASE_READY) {
+          const foodUpdates = {};
+          foodUpdates[eatenFoodId] = makeFood();
+          update(ref(db, `snakeRooms/${room}/food`), foodUpdates);
+        } else {
+          foods[eatenFoodId] = makeFood();
+        }
       }
 
       for (let i = 5; i < me.body.length; i++) {
@@ -501,8 +528,11 @@
       }
 
       me.lastSeen = Date.now();
+      players[playerId] = me;
       scoreText.textContent = me.score;
-      set(ref(db, `snakeRooms/${room}/players/${playerId}`), me);
+      if (FIREBASE_READY) {
+        set(ref(db, `snakeRooms/${room}/players/${playerId}`), me);
+      }
       renderLeaderboard();
     }
 
