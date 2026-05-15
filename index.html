@@ -311,6 +311,61 @@
       font-size: 14px;
     }
 
+    .skinPicker {
+      margin-top: 8px;
+      display: grid;
+      grid-template-columns: repeat(8, 1fr);
+      gap: 8px;
+    }
+
+    .colorPick, .flagPick {
+      height: 42px;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      border: 2px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.07);
+      color: white;
+      font-size: 22px;
+      box-shadow: none;
+    }
+
+    .colorPick {
+      border-radius: 999px;
+    }
+
+    .colorPick.active, .flagPick.active {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(73,242,255,0.18), 0 0 24px rgba(73,242,255,0.18);
+      transform: scale(1.04);
+    }
+
+    .customColorRow {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 16px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .customColorRow input[type="color"] {
+      width: 52px;
+      height: 42px;
+      padding: 4px;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+
+    .customColorRow span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
     .skinPreview {
       display: flex;
       align-items: center;
@@ -323,17 +378,22 @@
     }
 
     .skinBall {
-      width: 48px;
-      height: 48px;
+      width: 54px;
+      height: 54px;
       display: grid;
       place-items: center;
       border-radius: 999px;
       background: var(--accent);
       box-shadow: 0 0 24px rgba(73,242,255,0.35);
-      font-size: 25px;
+      font-size: 26px;
+      flex: 0 0 auto;
     }
 
     .skinText { color: var(--muted); font-size: 13px; }
+
+    @media (max-width: 760px) {
+      .skinPicker { grid-template-columns: repeat(5, 1fr); }
+    }
 
     @media (max-width: 760px) {
       .minimapWrap { width: 132px; height: 132px; top: 220px; right: 12px; }
@@ -369,31 +429,46 @@
       <input id="nameInput" maxlength="16" placeholder="Ex: Dilan" />
 
       <label>Couleur du snake</label>
-      <input id="colorInput" type="color" value="#49f2ff" />
+      <input id="colorInput" type="hidden" value="#49f2ff" />
+      <div id="colorPicker" class="skinPicker">
+        <button type="button" class="colorPick active" data-color="#49f2ff" style="background:#49f2ff"></button>
+        <button type="button" class="colorPick" data-color="#72ff9d" style="background:#72ff9d"></button>
+        <button type="button" class="colorPick" data-color="#ffcc4d" style="background:#ffcc4d"></button>
+        <button type="button" class="colorPick" data-color="#ff5f7a" style="background:#ff5f7a"></button>
+        <button type="button" class="colorPick" data-color="#a855f7" style="background:#a855f7"></button>
+        <button type="button" class="colorPick" data-color="#ffffff" style="background:#ffffff"></button>
+        <button type="button" class="colorPick" data-color="#21c55d" style="background:#21c55d"></button>
+        <button type="button" class="colorPick" data-color="#f97316" style="background:#f97316"></button>
+      </div>
+      <div class="customColorRow">
+        <input id="customColorInput" type="color" value="#49f2ff" />
+        <span>Ou choisis une couleur personnalisée</span>
+      </div>
 
       <label>Logo / Drapeau sur la tête</label>
-      <select id="flagInput">
-        <option value="">Aucun logo</option>
-        <option value="🇨🇦">Canada 🇨🇦</option>
-        <option value="🇫🇷">France 🇫🇷</option>
-        <option value="🇺🇸">États-Unis 🇺🇸</option>
-        <option value="🇲🇽">Mexique 🇲🇽</option>
-        <option value="🇧🇷">Brésil 🇧🇷</option>
-        <option value="🇬🇧">Royaume-Uni 🇬🇧</option>
-        <option value="🇩🇪">Allemagne 🇩🇪</option>
-        <option value="🇮🇹">Italie 🇮🇹</option>
-        <option value="🇪🇸">Espagne 🇪🇸</option>
-        <option value="🇯🇵">Japon 🇯🇵</option>
-        <option value="🇰🇷">Corée 🇰🇷</option>
-        <option value="🇨🇳">Chine 🇨🇳</option>
-        <option value="🇵🇹">Portugal 🇵🇹</option>
-        <option value="🇦🇺">Australie 🇦🇺</option>
-        <option value="🌍">Monde 🌍</option>
-        <option value="👑">Couronne 👑</option>
-        <option value="🔥">Feu 🔥</option>
-        <option value="☠️">Skull ☠️</option>
-        <option value="⚡">Éclair ⚡</option>
-      </select>
+      <input id="flagInput" type="hidden" value="" />
+      <div id="flagPicker" class="skinPicker">
+        <button type="button" class="flagPick active" data-flag="">—</button>
+        <button type="button" class="flagPick" data-flag="🇨🇦">🇨🇦</button>
+        <button type="button" class="flagPick" data-flag="🇫🇷">🇫🇷</button>
+        <button type="button" class="flagPick" data-flag="🇺🇸">🇺🇸</button>
+        <button type="button" class="flagPick" data-flag="🇲🇽">🇲🇽</button>
+        <button type="button" class="flagPick" data-flag="🇧🇷">🇧🇷</button>
+        <button type="button" class="flagPick" data-flag="🇬🇧">🇬🇧</button>
+        <button type="button" class="flagPick" data-flag="🇩🇪">🇩🇪</button>
+        <button type="button" class="flagPick" data-flag="🇮🇹">🇮🇹</button>
+        <button type="button" class="flagPick" data-flag="🇪🇸">🇪🇸</button>
+        <button type="button" class="flagPick" data-flag="🇯🇵">🇯🇵</button>
+        <button type="button" class="flagPick" data-flag="🇰🇷">🇰🇷</button>
+        <button type="button" class="flagPick" data-flag="🇨🇳">🇨🇳</button>
+        <button type="button" class="flagPick" data-flag="🇵🇹">🇵🇹</button>
+        <button type="button" class="flagPick" data-flag="🇦🇺">🇦🇺</button>
+        <button type="button" class="flagPick" data-flag="🌍">🌍</button>
+        <button type="button" class="flagPick" data-flag="👑">👑</button>
+        <button type="button" class="flagPick" data-flag="🔥">🔥</button>
+        <button type="button" class="flagPick" data-flag="☠️">☠️</button>
+        <button type="button" class="flagPick" data-flag="⚡">⚡</button>
+      </div>
 
       <div class="skinPreview">
         <div id="skinBall" class="skinBall"> </div>
@@ -445,6 +520,7 @@
     const nameInput = document.getElementById('nameInput');
     const colorInput = document.getElementById('colorInput');
     const flagInput = document.getElementById('flagInput');
+    const customColorInput = document.getElementById('customColorInput');
     const skinBall = document.getElementById('skinBall');
     const minimap = document.getElementById('minimap');
     const miniCtx = minimap.getContext('2d');
@@ -925,8 +1001,31 @@
       if (e.key === 'Enter') sendChat();
     });
 
-    colorInput.addEventListener('input', updateSkinPreview);
-    flagInput.addEventListener('change', updateSkinPreview);
+    document.querySelectorAll('.colorPick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.colorPick').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        colorInput.value = btn.dataset.color;
+        customColorInput.value = btn.dataset.color;
+        updateSkinPreview();
+      });
+    });
+
+    customColorInput.addEventListener('input', () => {
+      document.querySelectorAll('.colorPick').forEach(b => b.classList.remove('active'));
+      colorInput.value = customColorInput.value;
+      updateSkinPreview();
+    });
+
+    document.querySelectorAll('.flagPick').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.flagPick').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        flagInput.value = btn.dataset.flag;
+        updateSkinPreview();
+      });
+    });
+
     updateSkinPreview();
 
     addEventListener('beforeunload', () => {
