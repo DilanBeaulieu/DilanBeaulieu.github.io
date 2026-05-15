@@ -1879,6 +1879,8 @@
     addEventListener('mousemove', e => {
       mouseTarget.x = e.clientX;
       mouseTarget.y = e.clientY;
+      // Dès que la souris bouge, elle reprend le contrôle après les touches.
+      mouseControlEnabled = true;
     });
 
     addEventListener('touchmove', e => {
@@ -1886,6 +1888,8 @@
       if (!touch) return;
       mouseTarget.x = touch.clientX;
       mouseTarget.y = touch.clientY;
+      // Même logique sur mobile/tablette: le touch reprend le contrôle.
+      mouseControlEnabled = true;
     }, { passive: true });
 
     function setDir(dir) {
@@ -1902,10 +1906,14 @@
     }
 
     addEventListener('keydown', e => {
-      if (['ArrowUp', 'w', 'W'].includes(e.key)) setDir('up');
-      if (['ArrowDown', 's', 'S'].includes(e.key)) setDir('down');
-      if (['ArrowLeft', 'a', 'A'].includes(e.key)) setDir('left');
-      if (['ArrowRight', 'd', 'D'].includes(e.key)) setDir('right');
+      // Ne pas voler les touches quand le joueur écrit dans le chat/menu/admin.
+      const tag = e.target?.tagName?.toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
+
+      if (['ArrowUp', 'w', 'W'].includes(e.key)) { e.preventDefault(); setDir('up'); }
+      if (['ArrowDown', 's', 'S'].includes(e.key)) { e.preventDefault(); setDir('down'); }
+      if (['ArrowLeft', 'a', 'A'].includes(e.key)) { e.preventDefault(); setDir('left'); }
+      if (['ArrowRight', 'd', 'D'].includes(e.key)) { e.preventDefault(); setDir('right'); }
     });
 
     addEventListener('mousedown', e => {
