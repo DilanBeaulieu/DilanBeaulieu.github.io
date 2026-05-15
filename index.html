@@ -287,12 +287,8 @@
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-    /* =========================================================
-       SUPABASE CONFIG
-    ========================================================= */
     const SUPABASE_URL = 'https://yqudouxcqtdjfpdpsmty.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlxdWRvdXhjcXRkamZwZHBzbXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NzQ2MjgsImV4cCI6MjA5NDQ1MDYyOH0.iJhrcjC4m37iPZNYonL82aBiPvjczGOnVXX2D4DtCQU';
-
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     const canvas = document.getElementById('game');
@@ -310,12 +306,10 @@
     const copyBtn = document.getElementById('copyBtn');
 
     const WORLD = 3600;
-    const FOOD_COUNT = 170;
-    const STEP = 24;
-    const TICK_MS = 105;
-    const PLAYER_TIMEOUT = 15000;
-
-    let channel = null;
+    const FOOD_COUNT = 190;
+    const STEP = 22;
+    const TICK_MS = 95;
+    const PLAYER_TIMEOUT = 12000;
 
     let playerId = localStorage.getItem('snakePlayerId');
     if (!playerId) {
@@ -324,6 +318,7 @@
     }
 
     let room = new URLSearchParams(location.search).get('room') || '';
+    let channel = null;
     let players = {};
     let foods = {};
     let me = null;
@@ -331,6 +326,7 @@
     let nextDirection = { x: 1, y: 0 };
     let camera = { x: 0, y: 0 };
     let gameTimer = null;
+    let animationStarted = false;
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -342,35 +338,33 @@
     addEventListener('resize', resize);
     resize();
 
-    function safeRoomName(value) {
-      return (value || '')
-        .toLowerCase()
-        .replace(/[^a-z0-9-_]/g, '')
-        .slice(0, 20) || randomRoom();
+    function randomRoom() {
+      return 'room-' + Math.random().toString(36).slice(2, 7);
     }
 
-    function randomRoom() {
-      return 'room-' + Math.random().toString(36).slice(2, 8);
+    function safeRoomName(value) {
+      return String(value || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9-_]/g, '')
+        .slice(0, 24) || randomRoom();
     }
 
     function rand(min, max) {
       return Math.floor(Math.random() * (max - min + 1)) + min;
     }
 
-    function distance(a, b) {
+    function dist(a, b) {
       return Math.hypot(a.x - b.x, a.y - b.y);
     }
 
     function spawnPoint() {
-      return {
-        x: rand(200, WORLD - 200),
-        y: rand(200, WORLD - 200)
-      };
+      return { x: rand(250, WORLD - 250), y: rand(250, WORLD - 250) };
     }
 
-    function makeFood() {
+    function makeFood(seed = '') {
       const hue = rand(0, 360);
       return {
+        id: seed || crypto.randomUUID(),
         x: rand(80, WORLD - 80),
         y: rand(80, WORLD - 80),
         color: `hsl(${hue}, 95%, 65%)`,
@@ -378,35 +372,20 @@
       };
     }
 
-    async function ensureFood() {
-      if (Object.keys(foods).length > 0) return;
-
+    function ensureFood() {
+      if (Object.keys(foods).length) return;
       for (let i = 0; i < FOOD_COUNT; i++) {
-        foods['food-' + i] = makeFood();
+        foods['food-' + i] = makeFood('food-' + i);
       }
-    }
-
-    function syncPlayers() {
-      if (!channel) return;
-
-      channel.send({
-        type: 'broadcast',
-        event: 'playerUpdate',
-        payload: {
-          room,
-          player: me
-        }
-      });
     }
 
     function createPlayer(name, color) {
       const p = spawnPoint();
       return {
         id: playerId,
-        name: (name || 'Player').slice(0, 16),
+        name: String(name || 'Player').slice(0, 16),
         color,
         score: 0,
-        alive: true,
         lastSeen: Date.now(),
         body: [
           { x: p.x, y: p.y },
@@ -416,49 +395,90 @@
       };
     }
 
+    function broadcast(event, payload) {
+      if (!channel) return;
+      channel.send({ type: 'broadcast', event, payload });
+    }
+
     async function startGame() {
-      room = safeRoomName(roomInput.value || room);
-      const name = nameInput.value.trim() || 'Player';
-      const color = colorInput.value;
+      try {
+        createBtn.disabled = true;
+        createBtn.textContent = 'Connexion...';
 
-      const url = new URL(location.href);
-      url.searchParams.set('room', room);
-      history.replaceState(null, '', url);
+        room = safeRoomName(roomInput.value || room);
+        const name = nameInput.value.trim() || 'Player';
+        const color = colorInput.value;
 
-      me = createPlayer(name, color);
-      players = { [playerId]: me };
-      roomText.textContent = room;
-      shareLink.value = location.href;
-      menu.classList.add('hidden');
+        const url = new URL(location.href);
+        url.searchParams.set('room', room);
+        history.replaceState(null, '', url);
 
-      await ensureFood();
+        me = createPlayer(name, color);
+        players = { [playerId]: me };
+        ensureFood();
 
-      if (channel) {
-        supabase.removeChannel(channel);
-      }
+        roomText.textContent = room;
+        scoreText.textContent = '0';
+        shareLink.value = location.href;
 
-      channel = supabase.channel('snake-room-' + room, {
-        config: {
-          broadcast: { self: true }
+        if (channel) await supabase.removeChannel(channel);
+
+        channel = supabase.channel('snake-friends-' + room, {
+          config: { broadcast: { self: false } }
+        });
+
+        channel.on('broadcast', { event: 'player' }, ({ payload }) => {
+          if (!payload || payload.room !== room || !payload.player) return;
+          players[payload.player.id] = payload.player;
+        });
+
+        channel.on('broadcast', { event: 'food' }, ({ payload }) => {
+          if (!payload || payload.room !== room || !payload.foods) return;
+          foods = payload.foods;
+        });
+
+        channel.on('broadcast', { event: 'leave' }, ({ payload }) => {
+          if (!payload || payload.room !== room || !payload.id) return;
+          delete players[payload.id];
+        });
+
+        const status = await new Promise(resolve => {
+          channel.subscribe(resolve);
+        });
+
+        if (status !== 'SUBSCRIBED') {
+          throw new Error('Supabase Realtime non connecté: ' + status);
         }
-      });
 
-      channel.on('broadcast', { event: 'playerUpdate' }, ({ payload }) => {
-        if (!payload?.player) return;
-        players[payload.player.id] = payload.player;
-      });
+        menu.classList.add('hidden');
+        clearInterval(gameTimer);
+        gameTimer = setInterval(tick, TICK_MS);
 
-      channel.subscribe((status) => {
-        console.log('Supabase status:', status);
-      });
+        broadcast('player', { room, player: me });
+        broadcast('food', { room, foods });
 
-      clearInterval(gameTimer);
-      gameTimer = setInterval(tick, TICK_MS);
-      requestAnimationFrame(draw);
+        if (!animationStarted) {
+          animationStarted = true;
+          requestAnimationFrame(draw);
+        }
+      } catch (err) {
+        console.error(err);
+        alert('Erreur de connexion Supabase. Ouvre F12 > Console et dis-moi le message rouge.');
+      } finally {
+        createBtn.disabled = false;
+        createBtn.textContent = 'Créer / Jouer';
+      }
     }
 
     function tick() {
-      if (!me || !me.alive) return;
+      if (!me) return;
+
+      const now = Date.now();
+      for (const [id, p] of Object.entries(players)) {
+        if (id !== playerId && p.lastSeen && now - p.lastSeen > PLAYER_TIMEOUT) {
+          delete players[id];
+        }
+      }
 
       direction = nextDirection;
       const head = me.body[0];
@@ -469,38 +489,31 @@
 
       me.body.unshift(newHead);
 
-      let ate = false;
-      let eatenFoodId = null;
+      let ateId = null;
       for (const [id, food] of Object.entries(foods)) {
-        if (distance(newHead, food) < 22) {
-          ate = true;
-          eatenFoodId = id;
-          me.score += food.value;
+        if (dist(newHead, food) < 23) {
+          ateId = id;
+          me.score += food.value || 1;
           break;
         }
       }
 
-      if (!ate) {
+      if (ateId) {
+        foods[ateId] = makeFood(ateId);
+        broadcast('food', { room, foods });
+      } else {
         me.body.pop();
-      } else if (eatenFoodId) {
-        foods[eatenFoodId] = makeFood();
-      };
-          foodUpdates[eatenFoodId] = makeFood();
-          update(ref(db, `snakeRooms/${room}/food`), foodUpdates);
-        } else {
-          foods[eatenFoodId] = makeFood();
-        }
       }
 
       for (let i = 5; i < me.body.length; i++) {
-        if (distance(newHead, me.body[i]) < 12) dieAndRespawn();
+        if (dist(newHead, me.body[i]) < 12) respawn();
       }
 
       for (const [id, p] of Object.entries(players)) {
         if (id === playerId || !p.body) continue;
-        for (let i = 0; i < p.body.length; i++) {
-          if (distance(newHead, p.body[i]) < 15) {
-            dieAndRespawn();
+        for (const part of p.body) {
+          if (dist(newHead, part) < 15) {
+            respawn();
             break;
           }
         }
@@ -509,14 +522,14 @@
       me.lastSeen = Date.now();
       players[playerId] = me;
       scoreText.textContent = me.score;
-      syncPlayers();
+      broadcast('player', { room, player: me });
       renderLeaderboard();
     }
 
-    function dieAndRespawn() {
-      const keepName = me.name;
-      const keepColor = me.color;
-      me = createPlayer(keepName, keepColor);
+    function respawn() {
+      const oldName = me.name;
+      const oldColor = me.color;
+      me = createPlayer(oldName, oldColor);
       direction = { x: 1, y: 0 };
       nextDirection = { x: 1, y: 0 };
     }
@@ -527,8 +540,8 @@
         .sort((a, b) => (b.score || 0) - (a.score || 0))
         .slice(0, 8);
 
-      leaderboard.innerHTML = list.map((p, index) => `
-        <li><span>${index + 1}. ${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>
+      leaderboard.innerHTML = list.map((p, i) => `
+        <li><span>${i + 1}. ${escapeHtml(p.name)}</span><strong>${p.score || 0}</strong></li>
       `).join('');
     }
 
@@ -542,7 +555,6 @@
       const gridSize = 90;
       ctx.strokeStyle = 'rgba(255,255,255,0.055)';
       ctx.lineWidth = 1;
-
       const startX = Math.floor(camera.x / gridSize) * gridSize;
       const startY = Math.floor(camera.y / gridSize) * gridSize;
 
@@ -552,7 +564,6 @@
         ctx.lineTo(x - camera.x, innerHeight);
         ctx.stroke();
       }
-
       for (let y = startY; y < camera.y + innerHeight + gridSize; y += gridSize) {
         ctx.beginPath();
         ctx.moveTo(0, y - camera.y);
@@ -561,7 +572,7 @@
       }
     }
 
-    function drawWorldBorder() {
+    function drawBorder() {
       ctx.strokeStyle = 'rgba(73,242,255,0.45)';
       ctx.lineWidth = 5;
       ctx.strokeRect(-camera.x, -camera.y, WORLD, WORLD);
@@ -573,7 +584,7 @@
         ctx.fillStyle = food.color || '#fff';
         ctx.shadowColor = food.color || '#fff';
         ctx.shadowBlur = 12;
-        ctx.arc(food.x - camera.x, food.y - camera.y, 7 + food.value, 0, Math.PI * 2);
+        ctx.arc(food.x - camera.x, food.y - camera.y, 7 + (food.value || 1), 0, Math.PI * 2);
         ctx.fill();
         ctx.shadowBlur = 0;
       }
@@ -582,16 +593,14 @@
     function drawSnake(p, isMe) {
       if (!p || !p.body || !p.body.length) return;
       const color = p.color || '#49f2ff';
-
       for (let i = p.body.length - 1; i >= 0; i--) {
         const part = p.body[i];
-        const size = Math.max(9, 18 - i * 0.04);
         ctx.beginPath();
-        ctx.fillStyle = color;
         ctx.globalAlpha = i === 0 ? 1 : 0.82;
+        ctx.fillStyle = color;
         ctx.shadowColor = color;
         ctx.shadowBlur = isMe ? 16 : 8;
-        ctx.arc(part.x - camera.x, part.y - camera.y, size, 0, Math.PI * 2);
+        ctx.arc(part.x - camera.x, part.y - camera.y, 18, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -601,7 +610,7 @@
       ctx.fillStyle = '#fff';
       ctx.font = '700 14px Arial';
       ctx.textAlign = 'center';
-      ctx.fillText(p.name || 'Player', head.x - camera.x, head.y - camera.y - 28);
+      ctx.fillText(p.name || 'Player', head.x - camera.x, head.y - camera.y - 30);
     }
 
     function draw() {
@@ -614,11 +623,9 @@
       }
 
       drawGrid();
-      drawWorldBorder();
+      drawBorder();
       drawFood();
-
       Object.entries(players).forEach(([id, p]) => drawSnake(p, id === playerId));
-
       requestAnimationFrame(draw);
     }
 
@@ -647,9 +654,7 @@
     });
 
     createBtn.addEventListener('click', startGame);
-    randomBtn.addEventListener('click', () => {
-      roomInput.value = randomRoom();
-    });
+    randomBtn.addEventListener('click', () => roomInput.value = randomRoom());
 
     copyBtn.addEventListener('click', async () => {
       await navigator.clipboard.writeText(shareLink.value);
@@ -657,12 +662,11 @@
       setTimeout(() => copyBtn.textContent = 'Copier', 900);
     });
 
-    if (room) {
-      roomInput.value = room;
-    } else {
-      roomInput.value = randomRoom();
-    }
+    addEventListener('beforeunload', () => {
+      broadcast('leave', { room, id: playerId });
+    });
 
+    roomInput.value = room || randomRoom();
     nameInput.value = localStorage.getItem('snakeName') || '';
     nameInput.addEventListener('input', () => localStorage.setItem('snakeName', nameInput.value));
   </script>
