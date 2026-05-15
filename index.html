@@ -697,6 +697,7 @@
     let animationStarted = false;
     let lastBroadcastAt = 0;
     let isSpinningWheel = false;
+    let wheelSpinPrizeMap = [];
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -806,39 +807,91 @@
 
     function buildWheelStrip(finalPrize) {
       const strip = [];
-      for (let i = 0; i < 36; i++) {
+      const finalIndex = 42;
+
+      for (let i = 0; i < finalIndex; i++) {
         strip.push(WHEEL_PRIZES[rand(0, WHEEL_PRIZES.length - 1)]);
       }
+
+      // Cette case est la vraie case gagnante. On calcule ensuite sa position réelle à l'écran.
       strip.push(finalPrize);
-      for (let i = 0; i < 8; i++) {
+
+      for (let i = 0; i < 10; i++) {
         strip.push(WHEEL_PRIZES[rand(0, WHEEL_PRIZES.length - 1)]);
       }
-      wheelTrack.innerHTML = strip.map(p => `<div class="wheelPrize ${p.type === 'lose' ? 'bad' : 'good'}">${p.label}</div>`).join('');
+
+      wheelSpinPrizeMap = strip;
+      wheelTrack.innerHTML = strip.map((p, index) => {
+        const typeClass = p.type === 'lose' ? 'bad' : 'good';
+        return `<div class="wheelPrize ${typeClass}" data-wheel-index="${index}">${p.label}</div>`;
+      }).join('');
+
       wheelTrack.style.transition = 'none';
       wheelTrack.style.transform = 'translateX(0px)';
       wheelTrack.offsetHeight;
-      const prizeWidth = 104;
-      const finalIndex = 36;
-      const target = (finalIndex * prizeWidth) - (wheelTrack.parentElement.clientWidth / 2) + (prizeWidth / 2) + rand(-18, 18);
-      wheelTrack.style.transition = 'transform 3.2s cubic-bezier(.08,.9,.1,1)';
-      wheelTrack.style.transform = `translateX(-${target}px)`;
+
+      requestAnimationFrame(() => {
+        const slot = wheelTrack.parentElement;
+        const finalEl = wheelTrack.children[finalIndex];
+        if (!slot || !finalEl) return;
+
+        const finalCenter = finalEl.offsetLeft + (finalEl.offsetWidth / 2);
+        const slotCenter = slot.clientWidth / 2;
+        const target = Math.max(0, finalCenter - slotCenter);
+
+        wheelTrack.style.transition = 'transform 3.2s cubic-bezier(.08,.9,.1,1)';
+        wheelTrack.style.transform = `translateX(-${target}px)`;
+      });
+    }
+
+    function getWheelPrizeUnderPointer() {
+      const slot = wheelTrack.parentElement;
+      if (!slot) return null;
+
+      const slotRect = slot.getBoundingClientRect();
+      const pointerX = slotRect.left + (slotRect.width / 2);
+      let closestPrize = null;
+      let closestDistance = Infinity;
+
+      for (const el of wheelTrack.children) {
+        const rect = el.getBoundingClientRect();
+        const center = rect.left + (rect.width / 2);
+        const distance = Math.abs(center - pointerX);
+
+        if (pointerX >= rect.left && pointerX <= rect.right) {
+          const index = Number(el.dataset.wheelIndex);
+          return wheelSpinPrizeMap[index] || null;
+        }
+
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          const index = Number(el.dataset.wheelIndex);
+          closestPrize = wheelSpinPrizeMap[index] || null;
+        }
+      }
+
+      return closestPrize;
     }
 
     function startWheelSpin() {
-      if (!me) return;
+      if (!me || isSpinningWheel) return;
       isSpinningWheel = true;
       const oldScore = Math.max(0, Math.floor(me.score || 0));
-      const prize = pickWheelPrize();
+      const pickedPrize = pickWheelPrize();
       wheelSpinOverlay.classList.remove('hidden');
-      wheelResult.textContent = 'La roue tourne...';
-      buildWheelStrip(prize);
+      wheelResult.textContent = 'La roue tourne.';
+      buildWheelStrip(pickedPrize);
 
-      setTimeout(() => {
+      let spinFinished = false;
+      const finishSpin = () => {
+        if (spinFinished) return;
+        spinFinished = true;
+
+        // Source de vérité: la case réellement sous le pointeur à la fin du spin.
+        const prize = getWheelPrizeUnderPointer() || pickedPrize;
+
         if (prize.type === 'lose') {
-          wheelResult.textContent = '💀 X! Tu perds tout et ton score tombe par terre!';
-          const loserSnapshot = JSON.parse(JSON.stringify(me));
-          spawnExplosionFood(loserSnapshot);
-          broadcast('food', { room, foods, specialFoods });
+          wheelResult.textContent = '💀 X! Tu perds tout. Ton score est supprimé!';
           respawn();
         } else {
           const newScore = Math.floor(oldScore * prize.value);
@@ -854,7 +907,10 @@
           wheelSpinOverlay.classList.add('hidden');
           isSpinningWheel = false;
         }, 1800);
-      }, 3350);
+      };
+
+      wheelTrack.addEventListener('transitionend', finishSpin, { once: true });
+      setTimeout(finishSpin, 3450);
     }
 
     function spawnExplosionFood(player) {
