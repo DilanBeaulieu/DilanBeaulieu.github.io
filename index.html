@@ -1088,6 +1088,9 @@
     let nextDirection = { x: 1, y: 0 };
     let mouseControlEnabled = true;
     let mouseTarget = { x: innerWidth / 2, y: innerHeight / 2 };
+    // Sépare la direction de déplacement et la direction de tir.
+    // Comme ça, un tir au fusil à eau ne force plus le snake à tourner vers le clic/tap.
+    let aimTarget = { x: innerWidth / 2, y: innerHeight / 2 };
     let camera = { x: 0, y: 0 };
     let gameTimer = null;
     let animationStarted = false;
@@ -1777,22 +1780,22 @@
       renderLeaderboard();
     }
 
-    function getAimVector() {
+    function getAimVector(screenTarget = aimTarget) {
       if (!me?.body?.[0]) return { x: direction.x || 1, y: direction.y || 0 };
       const head = me.body[0];
-      const targetX = camera.x + mouseTarget.x;
-      const targetY = camera.y + mouseTarget.y;
+      const targetX = camera.x + screenTarget.x;
+      const targetY = camera.y + screenTarget.y;
       const dx = targetX - head.x;
       const dy = targetY - head.y;
       const len = Math.hypot(dx, dy) || 1;
       return { x: dx / len, y: dy / len };
     }
 
-    function shootWater() {
+    function shootWater(screenTarget = aimTarget) {
       if (!me?.body?.[0] || isSpinningWheel) return;
       if ((me.ammo || 0) <= 0) return;
 
-      const aim = getAimVector();
+      const aim = getAimVector(screenTarget);
       const head = me.body[0];
       const id = 'water-shot-' + crypto.randomUUID();
       const bullet = {
@@ -2126,6 +2129,8 @@
     addEventListener('mousemove', e => {
       mouseTarget.x = e.clientX;
       mouseTarget.y = e.clientY;
+      aimTarget.x = e.clientX;
+      aimTarget.y = e.clientY;
       // Dès que la souris bouge, elle reprend le contrôle après les touches.
       mouseControlEnabled = true;
     });
@@ -2140,6 +2145,8 @@
       e.preventDefault();
       mouseTarget.x = touch.clientX;
       mouseTarget.y = touch.clientY;
+      aimTarget.x = touch.clientX;
+      aimTarget.y = touch.clientY;
       mouseControlEnabled = true;
     }
 
@@ -2194,16 +2201,15 @@
 
     addEventListener('mousedown', e => {
       const target = e.target;
-      const isUiClick = target && (target.closest?.('.screen') || target.closest?.('.chatBox') || target.closest?.('.hudPanel') || target.closest?.('.mobileControls') || target.closest?.('.adminCorner'));
+      const isUiClick = target && (target.closest?.('.screen') || target.closest?.('.chatBox') || target.closest?.('.hudPanel') || target.closest?.('.mobileControls') || target.closest?.('.mobileQuickToggles') || target.closest?.('#mobileShootBtn') || target.closest?.('.adminCorner'));
 
       // Tirer ne doit jamais changer/forcer le mode déplacement.
-      // Avant, le clic gauche activait mouseControlEnabled avant le tir, ce qui pouvait donner
-      // un gros changement de direction et donner l'impression d'une téléportation.
+      // Le clic met seulement à jour la cible du tir, pas la cible de mouvement.
       if (e.button === 0 && !isUiClick && me && (me.ammo || 0) > 0) {
         e.preventDefault();
-        mouseTarget.x = e.clientX;
-        mouseTarget.y = e.clientY;
-        shootWater();
+        aimTarget.x = e.clientX;
+        aimTarget.y = e.clientY;
+        shootWater({ x: e.clientX, y: e.clientY });
         return;
       }
     });
@@ -2217,10 +2223,19 @@
     mobileHudBtn?.addEventListener('click', () => document.body.classList.toggle('mobileHudCollapsed'));
     mobileBoardBtn?.addEventListener('click', () => document.body.classList.toggle('showLeaderboard'));
     mobileChatBtn?.addEventListener('click', () => document.body.classList.toggle('showChat'));
-    mobileShootBtn?.addEventListener('click', e => {
+    let lastMobileShotAt = 0;
+    function fireMobileShot(e) {
       e.preventDefault();
+      e.stopPropagation();
+      const now = Date.now();
+      if (now - lastMobileShotAt < 180) return;
+      lastMobileShotAt = now;
+      // Bouton mobile: tire dans la dernière direction visée sans modifier la direction du snake.
       if (me && (me.ammo || 0) > 0) shootWater();
-    });
+    }
+    mobileShootBtn?.addEventListener('pointerdown', fireMobileShot, { passive: false });
+    mobileShootBtn?.addEventListener('touchstart', fireMobileShot, { passive: false });
+    mobileShootBtn?.addEventListener('click', fireMobileShot);
 
     createBtn.addEventListener('click', startGame);
     randomBtn.addEventListener('click', () => roomInput.value = randomRoom());
