@@ -765,12 +765,12 @@
     <div id="adminPanel" class="adminPanel">
       <h3>🛡️ Menu Admin</h3>
       <div id="adminLoginBox">
-        <div class="adminMiniText">Menu caché. Mot de passe requis pour activer les outils.</div>
+        <div class="adminMiniText">Menu caché. Touche Z pour ouvrir/fermer. Mot de passe requis une seule fois.</div>
         <input id="adminPasswordInput" type="password" placeholder="Mot de passe admin" autocomplete="off" />
         <button id="adminUnlockBtn" type="button">Déverrouiller</button>
       </div>
       <div id="adminToolsBox" class="hidden">
-        <div class="adminMiniText">Outils actifs seulement pour ton joueur dans cette salle.</div>
+        <div class="adminMiniText">Outils actifs pour ton joueur. Se ferme seul après 30 secondes.</div>
         <input id="adminPointsInput" type="number" min="1" value="10000" placeholder="Points à ajouter" />
         <button id="adminAddPointsBtn" type="button" class="adminFullBtn">+ Ajouter points</button>
         <div class="adminGrid">
@@ -825,6 +825,7 @@
     const wheelResult = document.getElementById('wheelResult');
     const multiplierLog = document.getElementById('multiplierLog');
     const adminCorner = document.getElementById('adminCorner');
+    const adminPanel = document.getElementById('adminPanel');
     const adminLoginBox = document.getElementById('adminLoginBox');
     const adminToolsBox = document.getElementById('adminToolsBox');
     const adminPasswordInput = document.getElementById('adminPasswordInput');
@@ -901,6 +902,8 @@
     let adminUnlocked = sessionStorage.getItem('snakeAdminUnlocked') === '1';
     let adminImmortal = false;
     let adminSpeed = false;
+    let adminAutoCloseTimer = null;
+    const ADMIN_AUTO_CLOSE_MS = 30000;
 
     function resize() {
       canvas.width = innerWidth * devicePixelRatio;
@@ -1274,6 +1277,41 @@
       adminSpeedBtn.classList.toggle('adminOn', adminSpeed);
     }
 
+    function clearAdminAutoClose() {
+      if (adminAutoCloseTimer) {
+        clearTimeout(adminAutoCloseTimer);
+        adminAutoCloseTimer = null;
+      }
+    }
+
+    function armAdminAutoClose() {
+      clearAdminAutoClose();
+      if (!adminCorner.classList.contains('open')) return;
+      adminAutoCloseTimer = setTimeout(() => {
+        adminCorner.classList.remove('open');
+        adminAutoCloseTimer = null;
+      }, ADMIN_AUTO_CLOSE_MS);
+    }
+
+    function openAdminMenu() {
+      adminCorner.classList.add('open');
+      refreshAdminUi();
+      armAdminAutoClose();
+      if (!adminUnlocked) {
+        setTimeout(() => adminPasswordInput?.focus(), 0);
+      }
+    }
+
+    function closeAdminMenu() {
+      adminCorner.classList.remove('open');
+      clearAdminAutoClose();
+    }
+
+    function toggleAdminMenu() {
+      if (adminCorner.classList.contains('open')) closeAdminMenu();
+      else openAdminMenu();
+    }
+
     function unlockAdmin() {
       if (adminPasswordInput.value !== 'Test67') {
         adminPasswordInput.value = '';
@@ -1283,8 +1321,7 @@
       adminUnlocked = true;
       sessionStorage.setItem('snakeAdminUnlocked', '1');
       adminPasswordInput.value = '';
-      adminCorner.classList.add('open');
-      refreshAdminUi();
+      openAdminMenu();
     }
 
     function requireAdmin() {
@@ -1910,6 +1947,8 @@
       const tag = e.target?.tagName?.toLowerCase();
       if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
 
+      if (e.key === 'z' || e.key === 'Z') { e.preventDefault(); toggleAdminMenu(); return; }
+
       if (['ArrowUp', 'w', 'W'].includes(e.key)) { e.preventDefault(); setDir('up'); }
       if (['ArrowDown', 's', 'S'].includes(e.key)) { e.preventDefault(); setDir('down'); }
       if (['ArrowLeft', 'a', 'A'].includes(e.key)) { e.preventDefault(); setDir('left'); }
@@ -1948,15 +1987,20 @@
 
     adminCorner.addEventListener('click', e => {
       if (e.target === adminCorner || e.target.classList.contains('adminHotspot')) {
-        adminCorner.classList.toggle('open');
+        toggleAdminMenu();
       }
     });
-    adminPanel.addEventListener('click', e => e.stopPropagation());
+    adminPanel.addEventListener('click', e => {
+      e.stopPropagation();
+      armAdminAutoClose();
+    });
     adminUnlockBtn.addEventListener('click', unlockAdmin);
     adminPasswordInput.addEventListener('keydown', e => {
       if (e.key === 'Enter') unlockAdmin();
+      else armAdminAutoClose();
     });
-    adminHideBtn.addEventListener('click', () => adminCorner.classList.remove('open'));
+    adminPasswordInput.addEventListener('input', armAdminAutoClose);
+    adminHideBtn.addEventListener('click', closeAdminMenu);
     adminAddPointsBtn.addEventListener('click', () => {
       if (!requireAdmin()) return;
       const amount = Math.max(1, Math.floor(Number(adminPointsInput.value) || 0));
