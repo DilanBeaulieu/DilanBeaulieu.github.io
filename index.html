@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
   <title>Snake Friends IO</title>
   <style>
     :root {
@@ -22,7 +22,13 @@
     body {
       margin: 0;
       min-height: 100vh;
+      min-height: 100dvh;
       overflow: hidden;
+      overscroll-behavior: none;
+      touch-action: none;
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
       font-family: Arial, Helvetica, sans-serif;
       color: var(--text);
       background:
@@ -88,6 +94,7 @@
       padding: 14px 16px;
       font-size: 16px;
       outline: none;
+      touch-action: manipulation;
     }
 
     input, select {
@@ -639,6 +646,161 @@
       .adminGrid { grid-template-columns: 1fr; }
     }
 
+
+    .mobileQuickToggles {
+      position: fixed;
+      right: max(10px, env(safe-area-inset-right));
+      top: max(10px, env(safe-area-inset-top));
+      display: none;
+      gap: 8px;
+      z-index: 12;
+    }
+
+    .mobileQuickToggles button {
+      width: auto;
+      min-width: 44px;
+      height: 44px;
+      margin: 0;
+      padding: 0 12px;
+      border-radius: 999px;
+      color: var(--text);
+      background: rgba(5, 13, 24, 0.84);
+      border: 1px solid rgba(255,255,255,0.16);
+      box-shadow: 0 12px 30px rgba(0,0,0,0.28);
+      backdrop-filter: blur(12px);
+    }
+
+    #mobileShootBtn {
+      position: fixed;
+      right: max(16px, env(safe-area-inset-right));
+      bottom: max(22px, env(safe-area-inset-bottom));
+      width: 72px;
+      height: 72px;
+      display: none;
+      place-items: center;
+      z-index: 9;
+      margin: 0;
+      padding: 0;
+      border-radius: 999px;
+      font-size: 30px;
+      color: #fff;
+      background: rgba(255,95,122,0.75);
+      border: 2px solid rgba(255,255,255,0.22);
+      box-shadow: 0 18px 45px rgba(0,0,0,0.35);
+      backdrop-filter: blur(10px);
+    }
+
+    .touchGuide {
+      position: fixed;
+      left: 50%;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      display: none;
+      z-index: 4;
+      pointer-events: none;
+      padding: 8px 12px;
+      border-radius: 999px;
+      color: rgba(234,246,255,0.78);
+      background: rgba(5,13,24,0.52);
+      border: 1px solid rgba(255,255,255,0.10);
+      font-size: 12px;
+      backdrop-filter: blur(8px);
+    }
+
+    @media (max-width: 760px), (pointer: coarse) {
+      .screen {
+        align-items: flex-start;
+        overflow-y: auto;
+        padding: max(12px, env(safe-area-inset-top)) 12px max(18px, env(safe-area-inset-bottom));
+      }
+
+      .card {
+        padding: 18px;
+        border-radius: 22px;
+        max-height: none;
+      }
+
+      h1 { font-size: clamp(30px, 11vw, 46px); }
+      p { margin: 8px 0; font-size: 14px; }
+      label { margin-top: 10px; margin-bottom: 5px; font-size: 12px; }
+      input, select, button { padding: 12px 13px; }
+      .note { display: none; }
+      .skinPicker { gap: 6px; grid-template-columns: repeat(6, 1fr); }
+      .colorPick, .flagPick { height: 38px; border-radius: 12px; font-size: 19px; }
+      .skinPreview { padding: 9px; margin-top: 9px; }
+      .skinBall { width: 44px; height: 44px; }
+
+      .mobileQuickToggles { display: flex; }
+      .touchGuide { display: block; }
+      #mobileShootBtn { display: grid; }
+
+      .hud {
+        top: max(58px, calc(env(safe-area-inset-top) + 58px));
+        left: 10px;
+        right: auto;
+        max-width: min(310px, calc(100vw - 20px));
+        gap: 8px;
+      }
+
+      .hudPanel {
+        min-width: 0;
+        width: min(310px, calc(100vw - 20px));
+        padding: 10px 12px;
+        border-radius: 16px;
+        background: rgba(5, 13, 24, 0.72);
+      }
+
+      .hudPanel:nth-child(2) { display: none; }
+      body.showLeaderboard .hudPanel:nth-child(2) { display: block; }
+      body.mobileHudCollapsed .hud { display: none; }
+
+      .shareBox { display: none; }
+      .small { font-size: 12px; }
+      #multiplierLog { max-height: 74px; gap: 4px; }
+      .multiplierLogItem { padding: 5px 6px; font-size: 11px; }
+
+      .minimapWrap {
+        width: 112px;
+        height: 112px;
+        top: auto;
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(104px, calc(env(safe-area-inset-bottom) + 104px));
+        opacity: .86;
+      }
+
+      .chatBox {
+        display: none;
+        left: 10px;
+        right: 10px;
+        bottom: max(96px, calc(env(safe-area-inset-bottom) + 96px));
+        width: auto;
+        height: min(215px, 42vh);
+        border-radius: 18px;
+      }
+      body.showChat .chatBox { display: flex; }
+      .chatHeader { padding: 9px 12px; }
+      #chatMessages { font-size: 12px; padding: 8px 10px; }
+      .chatInputRow { padding: 8px; }
+
+      .mobileControls {
+        display: none !important;
+      }
+
+      .adminCorner {
+        width: 42px;
+        height: 42px;
+        left: env(safe-area-inset-left);
+        bottom: env(safe-area-inset-bottom);
+      }
+      .adminHotspot { width: 42px; height: 42px; opacity: .28; }
+      .adminPanel {
+        left: 8px;
+        bottom: 8px;
+        max-height: calc(100dvh - 24px);
+        overflow-y: auto;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -786,6 +948,14 @@
     </div>
   </div>
 
+  <div class="mobileQuickToggles" aria-label="Options mobile">
+    <button id="mobileHudBtn" type="button">HUD</button>
+    <button id="mobileBoardBtn" type="button">🏆</button>
+    <button id="mobileChatBtn" type="button">💬</button>
+  </div>
+  <button id="mobileShootBtn" type="button" aria-label="Tirer">🔫</button>
+  <div class="touchGuide">Glisse ton doigt sur l’écran pour diriger</div>
+
   <div class="mobileControls">
     <button class="empty"></button><button data-dir="up">▲</button><button class="empty"></button>
     <button data-dir="left">◀</button><button data-dir="down">▼</button><button data-dir="right">▶</button>
@@ -839,6 +1009,10 @@
     const adminSpawnGunBtn = document.getElementById('adminSpawnGunBtn');
     const adminSpawnGatoradeBtn = document.getElementById('adminSpawnGatoradeBtn');
     const adminHideBtn = document.getElementById('adminHideBtn');
+    const mobileHudBtn = document.getElementById('mobileHudBtn');
+    const mobileBoardBtn = document.getElementById('mobileBoardBtn');
+    const mobileChatBtn = document.getElementById('mobileChatBtn');
+    const mobileShootBtn = document.getElementById('mobileShootBtn');
 
     const WORLD = 3600;
     const FOOD_COUNT = 260;
@@ -906,17 +1080,24 @@
     const ADMIN_AUTO_CLOSE_MS = 30000;
 
     function resize() {
-      canvas.width = innerWidth * devicePixelRatio;
-      canvas.height = innerHeight * devicePixelRatio;
-      canvas.style.width = innerWidth + 'px';
-      canvas.style.height = innerHeight + 'px';
-      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const vw = Math.max(1, Math.floor(window.innerWidth));
+      const vh = Math.max(1, Math.floor(window.innerHeight));
+      canvas.width = Math.floor(vw * dpr);
+      canvas.height = Math.floor(vh * dpr);
+      canvas.style.width = vw + 'px';
+      canvas.style.height = vh + 'px';
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-      minimap.width = 190 * devicePixelRatio;
-      minimap.height = 190 * devicePixelRatio;
-      miniCtx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+      const miniRect = minimap.getBoundingClientRect();
+      const miniSize = Math.max(90, Math.floor(Math.min(miniRect.width || 190, miniRect.height || 190)));
+      minimap.width = Math.floor(miniSize * dpr);
+      minimap.height = Math.floor(miniSize * dpr);
+      miniCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     }
     addEventListener('resize', resize);
+    addEventListener('orientationchange', () => setTimeout(resize, 250));
+    window.visualViewport?.addEventListener('resize', resize);
     resize();
 
     function randomRoom() {
@@ -1920,14 +2101,21 @@
       mouseControlEnabled = true;
     });
 
-    addEventListener('touchmove', e => {
-      const touch = e.touches?.[0];
-      if (!touch) return;
+    function isGameplayTouch(target) {
+      return !(target && (target.closest?.('.screen') || target.closest?.('.chatBox') || target.closest?.('.hudPanel') || target.closest?.('.mobileQuickToggles') || target.closest?.('#mobileShootBtn') || target.closest?.('.adminCorner')));
+    }
+
+    function setTouchTarget(e) {
+      const touch = e.touches?.[0] || e.changedTouches?.[0];
+      if (!touch || !isGameplayTouch(e.target)) return;
+      e.preventDefault();
       mouseTarget.x = touch.clientX;
       mouseTarget.y = touch.clientY;
-      // Même logique sur mobile/tablette: le touch reprend le contrôle.
       mouseControlEnabled = true;
-    }, { passive: true });
+    }
+
+    addEventListener('touchstart', setTouchTarget, { passive: false });
+    addEventListener('touchmove', setTouchTarget, { passive: false });
 
     function setDir(dir) {
       const dirs = {
@@ -1993,6 +2181,16 @@
 
     document.querySelectorAll('[data-dir]').forEach(btn => {
       btn.addEventListener('click', () => setDir(btn.dataset.dir));
+      btn.addEventListener('touchstart', e => { e.preventDefault(); setDir(btn.dataset.dir); }, { passive: false });
+    });
+
+
+    mobileHudBtn?.addEventListener('click', () => document.body.classList.toggle('mobileHudCollapsed'));
+    mobileBoardBtn?.addEventListener('click', () => document.body.classList.toggle('showLeaderboard'));
+    mobileChatBtn?.addEventListener('click', () => document.body.classList.toggle('showChat'));
+    mobileShootBtn?.addEventListener('click', e => {
+      e.preventDefault();
+      if (me && (me.ammo || 0) > 0) shootWater();
     });
 
     createBtn.addEventListener('click', startGame);
